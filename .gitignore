@@ -1,0 +1,59 @@
+# Node / deps
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment
+.env
+.env.*.local
+.env.local
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Build / cache
+dist/
+build/
+.cache/
+coverage/
+tmp/
+*.lock
+
+# SSL / keys / certs / secrets
+*.key
+*.pem
+*.pfx
+*.crt
+*.cer
+*.secret
+*.credentials
+secrets.env
+
+# Platform specific
+*.suo
+*.ntvs*
+*.user
+*.psd
+
+# Sensitive app data (config/DB)
+server/data/email-config.json
+server/data/users.json
+server/data/meetings.json
+server/data/*.db
+server/data/*.json
+
+# Generated files
+*.zip
+*.tgz
+
+# Misc
+.vagrant/

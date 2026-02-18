@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* VARIÁVEIS & RESET                                                         */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --bg-dark: #1B263B;
+  --bg-light: #E0E1DD;
+  --primary: #2187ab;
+  --primary-light: rgba(33, 135, 171, 0.14);
+  --primary-fg: #E0E1DD;
+
+  --card-bg: #253551;
+  --card-border: #31445e;
+  --card-hover-border: rgba(33, 135, 171, 0.5);
+
+  --text: #E0E1DD;
+  --text-muted: #8a9ab5;
+  --text-dim: #5a6f8e;
+
+  --sidebar-bg: #131d2e;
+  --sidebar-border: #1e2d42;
+  --sidebar-hover: #1e2d42;
+
+  --destructive: #ef4444;
+  --warning: #eab308;
+
+  --border: #31445e;
+  --input-bg: transparent;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --radius-full: 50%;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.2);
+  --shadow-md: 0 4px 14px rgba(0,0,0,0.25);
+  --shadow-xl: 0 20px 60px rgba(0,0,0,0.4);
+
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --sidebar-width: 256px;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { font-size: 16px; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: #1B263B;
+  background-attachment: fixed;
+  min-height: 100vh;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+a { text-decoration: none; color: inherit; }
+ul { list-style: none; }
+button { border: none; cursor: pointer; font-family: inherit; font-size: inherit; background: none; }
+input, select, textarea { font-family: inherit; font-size: inherit; }
+::selection { background: var(--primary); color: var(--primary-fg); }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-dim); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+.hidden { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* GENERIC                                                                    */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.btn-icon-sm {
+  padding: 4px;
+  color: var(--text-muted);
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn-icon-sm:hover { color: var(--text); }
+
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* APP LAYOUT                                                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.app-layout { display: flex; height: 100vh; overflow: hidden; }
+.main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }

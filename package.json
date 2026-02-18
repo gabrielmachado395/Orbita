@@ -1,0 +1,23 @@
+{
+  "name": "reunix",
+  "version": "1.0.0",
+  "description": "ReuniX - Sistema de agendamento de reuniões",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js",
+    "dev": "concurrently -k \"nodemon --watch server --ext js,json --exec node server/server.js\" \"browser-sync start --proxy http://localhost:3000 --files \\\"public/**/*\\\" --no-notify --port 3001\""
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "nodemailer": "^8.0.1",
+    "pdfkit": "^0.17.2"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "browser-sync": "^3.0.4",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11"
+  }
+}

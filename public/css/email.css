@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════════════ */
+/* EMAIL CONFIG / SEND PANELS                                                 */
+/* ═══════════════════════════════════════════════════════════════════════════ */
+
+.email-config-overlay,
+.email-send-overlay {
+  position: fixed; inset: 0; z-index: 660;
+  background: rgba(10, 16, 27, 0.6);
+  display: none; backdrop-filter: blur(2px);
+}
+.email-config-overlay.open,
+.email-send-overlay.open { display: block; }
+
+.email-config-panel,
+.email-send-panel {
+  position: fixed; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0.95);
+  z-index: 670; width: 92%; max-width: 480px;
+  background: var(--card-bg); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); box-shadow: var(--shadow-xl);
+  display: none; opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.email-config-panel.open,
+.email-send-panel.open {
+  display: block; opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.email-config-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 20px; border-bottom: 1px solid var(--border);
+}
+.email-config-header h3 {
+  margin: 0; font-size: 1rem; color: var(--text);
+}
+.email-config-body {
+  padding: 20px; display: flex; flex-direction: column; gap: 14px;
+}
+.email-field label {
+  display: block; font-size: 0.65rem; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  color: var(--primary); margin-bottom: 6px;
+}
+.email-input {
+  width: 100%; padding: 10px 12px;
+  background: rgba(19, 29, 46, 0.5);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); font-size: 0.85rem;
+  font-family: inherit; outline: none;
+  transition: var(--transition);
+}
+.email-input:focus { border-color: var(--primary); }
+.email-input::placeholder { color: var(--text-dim); }
+
+.email-field-row {
+  display: flex; gap: 12px;
+}
+.email-field-row .email-field { flex: 1; }
+
+.toggle-label-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 0.85rem; color: var(--text);
+  cursor: pointer;
+}
+.toggle-label-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--primary);
+}
+
+.email-actions {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 8px;
+}
+
+/* Ata email button */
+.btn-ata-email {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--radius);
+  background: rgba(58, 125, 68, 0.15);
+  border: 1px solid var(--primary);
+  color: var(--primary); font-size: 0.82rem; font-weight: 500;
+  transition: var(--transition); margin-left: auto;
+}
+.btn-ata-email:hover { background: rgba(58, 125, 68, 0.25); }

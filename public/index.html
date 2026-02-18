@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Órbita</title>
+  <!-- CSS Modules -->
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/header.css">
+  <link rel="stylesheet" href="css/cards.css">
+  <link rel="stylesheet" href="css/sidebar.css">
+  <link rel="stylesheet" href="css/filter.css">
+  <link rel="stylesheet" href="css/detail.css">
+  <link rel="stylesheet" href="css/profile.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/login.css">
+  <link rel="stylesheet" href="css/email.css">
+  <link rel="stylesheet" href="css/loading.css">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/webp" href="/%C3%93rbita.ico">
+</head>
+<body>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- LOGIN SCREEN                                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="login-screen" id="loginScreen">
+    <div class="login-card">
+      <span class="login-logo"></span>
+      <h1 class="login-title">Órbita</h1>
+      <p class="login-subtitle">Faça login para continuar</p>
+
+      <div class="login-tabs">
+        <button class="login-tab active" data-ltab="login">Entrar</button>
+        <button class="login-tab" data-ltab="register">Criar conta</button>
+      </div>
+
+      <button class="login-google" id="loginGoogle" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+        <span id="loginGoogleText">Entrar com Google</span>
+      </button>
+
+      <div class="login-divider">
+        <span id="loginDividerText">ou</span>
+      </div>
+
+      <form class="login-form" id="loginForm">
+        <input type="text" id="loginName" placeholder="Nome completo" class="login-input" required>
+        <input type="email" id="loginEmail" placeholder="E-mail" class="login-input" required>
+        <input type="password" id="loginPassword" placeholder="Senha" class="login-input" required>
+        <p class="login-error" id="loginError"></p>
+        <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="app-layout" id="appLayout" style="display:none">
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- MAIN AREA                                                           -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <main class="main-area">
+
+      <!-- ── LIST VIEW ──────────────────────────────────────────────────── -->
+      <div id="listView">
+        <header class="meeting-header">
+          <div class="header-accent-bar"></div>
+          <div class="header-content">
+            <div class="header-left">
+              <span class="header-logo"></span>
+              <div class="header-divider"></div>
+              <h1 class="header-title">Reuniões</h1>
+              <button class="btn-new-meeting" id="btnNewMeeting" aria-label="Nova reunião">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </button>
+            </div>
+            <button class="btn-layout" aria-label="Visualização">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+            </button>
+          </div>
+              <div class="header-filter">
+            <button class="filter-chip" id="btnFilter">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+              <span>FILTROS</span>
+              <svg class="chevron-icon" id="filterChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="filter-chips-row" id="filterChipsRow" aria-label="Filtros ativos"></div>
+          </div>
+        </header>
+
+        <section class="meetings-area" id="meetingsArea">
+          <div class="empty-state" id="emptyState">
+            <p>Nenhuma reunião agendada. Clique no <span class="accent">+</span> para criar.</p>
+          </div>
+          <div class="meetings-grid" id="meetingsGrid"></div>
+        </section>
+      </div>
+
+      <!-- ── DETAIL VIEW ────────────────────────────────────────────────── -->
+      <div id="detailView" class="hidden">
+        <!-- Detail Header -->
+        <header class="detail-header">
+          <div class="header-accent-bar"></div>
+          <div class="header-content">
+            <div class="header-left">
+              <span class="header-logo"></span>
+              <div class="header-divider"></div>
+              <h1 class="header-title" id="detailTitle">Reunião</h1>
+              <button class="btn-icon-sm" id="btnDetailSettings" aria-label="Configurações">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+              </button>
+            </div>
+            <div class="chrono-area">
+              <button class="chrono-play" id="chronoPlay" aria-label="Iniciar cronômetro">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              </button>
+              <div class="chrono-display">
+                <span class="chrono-time" id="chronoTime">00:00:00</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Detail Nav -->
+        <div class="detail-nav">
+          <button class="btn-back" id="btnBack" aria-label="Voltar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+          <div class="detail-tabs">
+            <button class="detail-tab active" data-tab="resumo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Resumo
+            </button>
+            <button class="detail-tab" data-tab="anexos">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              Anexos
+            </button>
+            <button class="detail-tab" data-tab="ata">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              Ata
+            </button>
+          </div>
+        </div>
+
+        <!-- Detail Content -->
+        <div class="detail-content">
+
+          <!-- TAB: Resumo -->
+          <div class="tab-panel" id="tabResumo">
+            <!-- Info row -->
+            <div class="detail-info">
+              <div class="info-date">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                <div>
+                  <span class="info-date-text" id="detailDate">10/02/2026</span>
+                  <span class="info-time-text" id="detailTime">13h30</span>
+                </div>
+              </div>
+              <div class="info-block">
+                <span class="info-label">RESPONSÁVEL</span>
+                <div class="info-value">
+                  <span class="card-avatar" id="detailRespAvatar">GM</span>
+                  <span id="detailRespName">Gabriel Machado</span>
+                </div>
+              </div>
+              <div class="info-block">
+                <span class="info-label">MEMBROS</span>
+                <div class="info-value" id="detailMembers"></div>
+              </div>
+              <div class="info-block">
+                <span class="info-label">DESCRIÇÃO</span>
+                <span class="info-desc" id="detailDesc"></span>
+              </div>
+            </div>
+
+            <!-- Two-column content -->
+            <div class="detail-columns">
+              <!-- LEFT: Destaques / Pautas -->
+              <div class="detail-col-left">
+                <div class="col-header">
+                  <div class="col-tabs">
+                    <button class="col-tab active" data-coltab="destaques" id="tabBtnDestaques">Destaques</button>
+                    <button class="col-tab" data-coltab="pautas" id="tabBtnPautas">Pautas da reunião</button>
+                    <button class="btn-add-circle" id="btnAddPauta" aria-label="Adicionar pauta">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                    </button>
+                  </div>
+                  <div class="col-filters">
+                    <div class="col-filter-wrap" id="filterRespWrap">
+                      <button class="col-filter-btn" id="btnFilterResp">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="18" y1="8" x2="23" y2="13"/><line x1="23" y1="8" x2="18" y2="13"/></svg>
+                        POR RESPONSÁVEL
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      <div class="col-filter-dropdown" id="filterRespDropdown">
+                        <div class="col-filter-items" id="filterRespItems"></div>
+                      </div>
+                    </div>
+                    <div class="col-filter-wrap" id="filterStatusWrap">
+                      <button class="col-filter-btn" id="btnFilterStatus">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        POR STATUS
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                      </button>
+                      <div class="col-filter-dropdown" id="filterStatusDropdown">
+                        <button class="col-filter-item" data-status="open">Em aberto</button>
+                        <button class="col-filter-item" data-status="done">Finalizadas</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Destaques content -->
+                <div id="destaquesContent">
+                  <div class="highlight-input-wrap">
+                    <input type="text" id="highlightInput" placeholder="Novo destaque" class="highlight-input">
+                  </div>
+                  <div class="highlights-list" id="highlightsList"></div>
+                </div>
+
+                <!-- Pautas content -->
+                <div id="pautasContent" class="hidden">
+                  <div class="highlight-input-wrap">
+                    <input type="text" id="pautaInput" placeholder="Nova pauta" class="highlight-input">
+                  </div>
+                  <div class="highlights-list" id="pautasList">
+                    <div class="empty-col">Nenhuma pauta ainda</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RIGHT: Tarefas / Anotações -->
+              <div class="detail-col-right">
+                <div class="col-header">
+                  <div class="col-tabs">
+                    <button class="col-tab active" data-coltab="tarefas">Tarefas</button>
+                    <button class="col-tab" data-coltab="anotacoes">Anotações</button>
+                  </div>
+                  <div class="col-filters">
+                    <button class="btn-add-circle" id="btnRightAdd" aria-label="Adicionar item">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                    </button>
+                  </div>
+                </div>
+                <div class="tasks-area" id="tasksArea">
+                  <div class="empty-col">Nenhuma tarefa</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB: Anexos -->
+          <div class="tab-panel hidden" id="tabAnexos">
+            <div class="anexos-center">
+              <button class="btn-upload" id="btnUpload">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+                Faça upload do arquivo
+              </button>
+              <input type="file" id="fileInput" class="hidden" multiple>
+              <div class="attachments-list" id="attachmentsList"></div>
+            </div>
+          </div>
+
+          <!-- TAB: Ata -->
+          <div class="tab-panel hidden" id="tabAta">
+            <div class="ata-header">
+              <div class="ata-search-controls">
+                <select id="ataMonthSelect" class="ata-month-select" aria-label="Mês da ata">
+                  <option value="0">Janeiro</option>
+                  <option value="1">Fevereiro</option>
+                  <option value="2">Março</option>
+                  <option value="3">Abril</option>
+                  <option value="4">Maio</option>
+                  <option value="5">Junho</option>
+                  <option value="6">Julho</option>
+                  <option value="7">Agosto</option>
+                  <option value="8">Setembro</option>
+                  <option value="9">Outubro</option>
+                  <option value="10">Novembro</option>
+                  <option value="11">Dezembro</option>
+                </select>
+                <input id="ataYearInput" class="ata-year-input" type="number" min="2000" max="2100" step="1" aria-label="Ano da ata">
+                <button class="btn-filter-apply ata-search-btn" id="ataSearchBtn">Pesquisar</button>
+              </div>
+              <button class="btn-ata-email" id="btnAtaEmailPreview" title="Pré-visualizar email da ata">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>
+                Pré-visualizar
+              </button>
+              <button class="btn-ata-email" id="btnAtaEmail" title="Enviar ata por email">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                Enviar ata
+              </button>
+            </div>
+            <div class="ata-content" id="ataContent">
+              <p class="ata-empty">Não há registros de atas disponíveis para esse mês</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                             -->
+    <!-- ════════════════════════════════════════════════════════════════════ -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-top">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+      </div>
+
+      <div class="sidebar-search">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Pesquisar..." id="sidebarSearch" autocomplete="off">
+      </div>
+
+      <div class="sidebar-org" id="sidebarOrg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span class="sidebar-org-name">Agil</span>
+        <svg class="sidebar-org-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button class="nav-btn" data-nav="tarefas">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          <span>Tarefas</span>
+        </button>
+        <button class="nav-btn" data-nav="projetos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+          <span>Projetos</span>
+        </button>
+        <button class="nav-btn" data-nav="indicadores">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>Indicadores</span>
+        </button>
+        <button class="nav-btn" data-nav="planejamento">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          <span>Planejamento</span>
+        </button>
+        <button class="nav-btn" data-nav="processos">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
+          <span>Processos</span>
+        </button>
+        <button class="nav-btn active" data-nav="reunioes">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>Reuniões</span>
+        </button>
+        <button class="nav-btn has-chevron" data-nav="relatorios">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          <span>Relatórios</span>
+          <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <button class="sidebar-notif-btn" id="sidebarNotifBtn" aria-label="Notificações">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="notif-dot" id="sidebarNotifDot"></span>
+        </button>
+        <button class="sidebar-avatar" id="sidebarAvatar">GM</button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- FILTER PANEL                                                          -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="filter-panel-overlay" id="filterPanelOverlay"></div>
+  <div class="filter-panel" id="filterPanel">
+    <div class="fp-header">
+      <h3>Novo Filtro</h3>
+      <button class="btn-icon-sm" id="fpClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="fp-body">
+      <div class="fp-field">
+        <label>STATUS</label>
+        <select id="fpStatus">
+          <option value="">Selecione...</option>
+          <option value="not_started">Não Iniciada</option>
+          <option value="completed">Finalizada</option>
+        </select>
+      </div>
+      <div class="fp-field">
+        <label>UNIDADE DE NEGÓCIO</label>
+        <select id="fpUnit">
+          <option value="">Selecione...</option>
+          <option value="Stik Elásticos">Stik Elásticos</option>
+          <option value="Agil">Agil</option>
+        </select>
+      </div>
+      <div class="fp-field">
+        <label>RESPONSÁVEL</label>
+        <select id="fpResponsible">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="fp-field">
+        <label>MEMBRO</label>
+        <select id="fpMember">
+          <option value="">Selecione...</option>
+        </select>
+      </div>
+      <div class="fp-field">
+        <label>TIPO</label>
+        <select id="fpType">
+          <option value="">Selecione...</option>
+          <option value="Gerencial">Gerencial</option>
+          <option value="Projeto">Projeto</option>
+          <option value="Confidencial">Confidencial</option>
+          <option value="Membro">Membro</option>
+          <option value="Eventual">Eventual</option>
+        </select>
+      </div>
+      <div class="fp-field">
+        <label>FREQUÊNCIA</label>
+        <select id="fpFrequency">
+          <option value="">Selecione...</option>
+          <option value="never">Nunca</option>
+          <option value="weekly">Semanal</option>
+          <option value="biweekly">Quinzenal</option>
+          <option value="monthly">Mensal</option>
+          <option value="multi">Vários</option>
+        </select>
+      </div>
+    </div>
+    <div class="fp-footer">
+      <button class="btn-filter-apply" id="fpApply">Filtrar</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- START: PARTICIPANTES                                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="start-overlay" id="startOverlay">
+    <div class="start-card" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+      <h2 id="startTitle">Participantes</h2>
+      <p class="start-subtitle">Confirme os participantes presentes</p>
+
+      <div class="start-members" id="startMembers"></div>
+      <div class="start-selected-members" id="startSelectedCards"></div>
+
+      <div class="start-guests">
+        <div class="start-guests-title">CONVIDADOS</div>
+        <div class="start-dropdown" id="startGuestDropdown">
+          <div class="start-dropdown-trigger" id="startGuestTrigger" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+            <input type="text" id="startGuestInput" class="start-guest-input" placeholder="Digite" autocomplete="off">
+            <svg class="start-dropdown-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="start-dropdown-menu" id="startGuestMenu" role="listbox" aria-label="Convidados">
+            <div class="start-guest-list" id="startGuestList"></div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-save" id="btnStartMeeting">Começar reunião</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- MODAL: CRIAR REUNIÃO                                                  -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="modalOverlay">
+    <div class="modal-create">
+      <div class="modal-recurrence">
+        <span class="recurrence-label">Essa reunião se repete?</span>
+        <div class="recurrence-options">
+          <button class="rec-btn active" data-rec="never">NUNCA</button>
+          <button class="rec-btn" data-rec="weekly">TODA SEMANA</button>
+          <button class="rec-btn" data-rec="biweekly">15 DIAS</button>
+          <button class="rec-btn" data-rec="monthly">TODO MÊS</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="toggle-row">
+          <button class="toggle-switch active" id="toggleActive" aria-label="Reunião ativa">
+            <span class="toggle-thumb"></span>
+          </button>
+          <span class="toggle-label">Reunião ativa</span>
+        </div>
+        <div class="field-name">
+          <input type="text" id="meetingName" placeholder="Nome da reunião" class="input-name" required>
+          <p class="error-msg" id="nameError">Este campo é obrigatório</p>
+        </div>
+        <div class="field-desc">
+          <input type="text" id="meetingDesc" placeholder="Descrição da reunião" class="input-desc">
+        </div>
+        <div class="date-duration-row">
+          <div class="date-block">
+            <div class="icon-circle">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <span class="icon-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+            </div>
+            <span class="field-label">Data</span>
+            <input type="date" id="meetingDate" value="2026-02-10">
+            <input type="time" id="meetingTime" value="13:30">
+          </div>
+          <div class="duration-block">
+            <div class="icon-circle">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              <span class="icon-badge">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              </span>
+            </div>
+            <span class="field-label">Duração</span>
+            <div class="duration-picker" id="durationPicker">
+              <div class="duration-column" data-type="hours">
+                <div class="duration-column-label">Horas</div>
+                <input type="text" class="duration-step-input" id="durationHoursValue" value="01" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Horas">
+              </div>
+              <div class="duration-separator">:</div>
+              <div class="duration-column" data-type="minutes">
+                <div class="duration-column-label">Minutos</div>
+                <input type="text" class="duration-step-input" id="durationMinutesValue" value="00" inputmode="numeric" pattern="[0-9]*" maxlength="2" aria-label="Minutos">
+              </div>
+            </div>
+            <input type="hidden" id="meetingDuration" value="1h">
+          </div>
+        </div>
+        <div class="selects-row-3">
+          <div class="select-field">
+            <label>TIPO DE REUNIÃO</label>
+            <div class="custom-select searchable-select" id="typeSelect">
+              <button class="select-trigger" id="typeTrigger">
+                <span>Gerencial</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="select-dropdown" id="typeDropdown">
+                <div class="search-field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="search-input" placeholder="Pesquisar..." data-search-dropdown>
+                </div>
+                <div class="select-options-list">
+                  <button class="select-option selected" data-value="Gerencial">Gerencial</button>
+                  <button class="select-option" data-value="Projeto">Projeto</button>
+                  <button class="select-option" data-value="Confidencial">Confidencial</button>
+                  <button class="select-option" data-value="Membro">Membro</button>
+                  <button class="select-option" data-value="Eventual">Eventual</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="select-field">
+            <label>UNIDADE DE NEGÓCIO</label>
+            <div class="custom-select searchable-select" id="unitSelect">
+              <button class="select-trigger" id="unitTrigger">
+                <span>Selecione...</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="select-dropdown" id="unitDropdown">
+                <div class="search-field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="search-input" placeholder="Pesquisar..." data-search-dropdown>
+                </div>
+                <div class="select-options-list">
+                  <button class="select-option" data-value="Stik Elásticos">Stik Elásticos</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="select-field">
+            <label>DEPARTAMENTO</label>
+            <div class="custom-select searchable-select" id="deptSelect">
+              <button class="select-trigger" id="deptTrigger">
+                <span>Selecione...</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="select-dropdown" id="deptDropdown">
+                <div class="search-field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="search-input" placeholder="Pesquisar..." data-search-dropdown>
+                </div>
+                <div class="select-options-list">
+                  <button class="select-option" data-value="Diretoria">Diretoria</button>
+                  <button class="select-option" data-value="Comercial">Comercial</button>
+                  <button class="select-option" data-value="Financeiro">Financeiro</button>
+                  <button class="select-option" data-value="Produção">Produção</button>
+                  <button class="select-option" data-value="RH">RH</button>
+                  <button class="select-option" data-value="Suprimentos">Suprimentos</button>
+                  <button class="select-option" data-value="Controladoria">Controladoria</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="selects-row-2">
+          <div class="select-field">
+            <label>INDICADORES</label>
+            <div class="custom-select searchable-select" id="indicSelect">
+              <button class="select-trigger" id="indicTrigger">
+                <span>Selecione...</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="select-dropdown" id="indicDropdown">
+                <div class="search-field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="search-input" placeholder="Pesquisar..." data-search-dropdown>
+                </div>
+                <div class="select-options-list">
+                  <p class="select-empty">Sem itens cadastrados</p>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="select-field">
+            <label>PLANEJAMENTOS</label>
+            <div class="custom-select searchable-select" id="planSelect">
+              <button class="select-trigger" id="planTrigger">
+                <span>Selecione...</span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="select-dropdown" id="planDropdown">
+                <div class="search-field">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" class="search-input" placeholder="Pesquisar..." data-search-dropdown>
+                </div>
+                <div class="select-options-list">
+                  <p class="select-empty">Sem itens cadastrados</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="members-section">
+          <label>MEMBROS</label>
+          <div class="members-row" id="membersRow">
+            <div class="member-avatar selected-member">GM</div>
+            <button class="btn-add-member" id="btnAddMember" aria-label="Adicionar membro">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </div>
+          <div class="members-dropdown" id="membersDropdown"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" id="btnCancel">Cancelar</button>
+          <button class="btn-save" id="btnSave">Salvar Reunião</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- NOTIFICATION PANEL                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">
+      <h3>Notificações</h3>
+      <button class="btn-text" id="btnReadAll">Marcar todas como lidas</button>
+    </div>
+    <div class="notif-panel-body" id="notifList"></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- PROFILE PANEL                                                         -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="profile-overlay" id="profileOverlay"></div>
+  <div class="profile-panel" id="profilePanel">
+    <div class="profile-banner">
+      <div class="profile-photo-wrap" id="profilePhotoWrap">
+        <img class="profile-photo" id="profilePhoto" src="" alt="Foto" style="display:none">
+        <svg class="profile-photo-placeholder" id="profilePhotoPlaceholder" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <div class="profile-photo-overlay" id="profilePhotoOverlay">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <input type="file" id="profilePhotoInput" accept="image/*" style="display:none">
+      </div>
+    </div>
+    <div class="profile-body">
+      <div class="profile-name-row">
+        <span class="profile-name" id="profileName">Gabriel Machado</span>
+        <button class="btn-icon-sm" id="btnEditName" aria-label="Editar nome">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+      </div>
+      <div class="profile-email">
+        gabrielmachado.emp@gmail.com
+        <span class="online-dot"></span>
+      </div>
+      <div class="profile-field">
+        <span class="profile-label">CARGO <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <span class="profile-value">----</span>
+      </div>
+      <div class="profile-field">
+        <span class="profile-label">UNIDADE DE NEGÓCIO <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
+        <span class="profile-value">Stik Elásticos</span>
+      </div>
+      <div class="profile-row-3">
+        <div class="profile-field-sm">
+          <span class="profile-label">IDIOMA</span>
+          <div class="profile-select-row">
+            <span class="flag-icon">🇧🇷</span>
+            <span>Português (Brasil)</span>
+          </div>
+        </div>
+        <div class="profile-field-sm">
+          <span class="profile-label">FUSO HORÁRIO</span>
+          <div class="profile-select-row profile-tz-trigger" id="profileTzTrigger">
+            <span id="profileTzValue">America/Sao_Paulo (-03:00)</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+          <div class="profile-tz-dropdown" id="profileTzDropdown"></div>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button class="profile-btn green" id="btnEmailConfig">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          EMAIL
+        </button>
+        <button class="profile-btn green" id="btnChangePassword">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          SENHA
+        </button>
+        <button class="profile-btn red" id="btnLogout">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+          SAIR
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- PASSWORD CHANGE MODAL                                                   -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="modal-overlay" id="passwordOverlay">
+    <div class="password-card">
+      <h2 class="password-title">Alterar Senha</h2>
+      <div class="password-field">
+        <span class="password-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          SENHA ANTIGA
+        </span>
+        <div class="password-input-wrap">
+          <input type="password" id="pwdOld" class="password-input" placeholder="Digite sua senha">
+          <button type="button" class="password-eye" data-toggle-pwd="pwdOld" aria-label="Mostrar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="password-field">
+        <span class="password-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          NOVA SENHA
+        </span>
+        <div class="password-input-wrap">
+          <input type="password" id="pwdNew" class="password-input" placeholder="Digite sua senha">
+          <button type="button" class="password-eye" data-toggle-pwd="pwdNew" aria-label="Mostrar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="password-field">
+        <span class="password-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          REPETIR SENHA
+        </span>
+        <div class="password-input-wrap">
+          <input type="password" id="pwdRepeat" class="password-input" placeholder="Digite sua senha">
+          <button type="button" class="password-eye" data-toggle-pwd="pwdRepeat" aria-label="Mostrar">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+      </div>
+      <p class="password-error" id="pwdError"></p>
+      <button class="password-save" id="btnSavePassword">SALVAR ALTERAÇÕES</button>
+      <button class="password-forgot">🔒 Esqueceu sua senha?</button>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- EMAIL CONFIG PANEL                                                    -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="email-config-overlay" id="emailConfigOverlay"></div>
+  <div class="email-config-panel" id="emailConfigPanel">
+    <div class="email-config-header">
+      <h3>Configuração de Email</h3>
+      <button class="btn-icon-sm" id="emailConfigClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="email-config-body">
+      <div class="email-field">
+        <label>ATIVO</label>
+        <label class="toggle-label-row">
+          <input type="checkbox" id="emailEnabled">
+          <span>Habilitar envio de emails</span>
+        </label>
+      </div>
+      <div class="email-field">
+        <label>HOST SMTP</label>
+        <input type="text" id="emailHost" placeholder="smtp.gmail.com" class="email-input">
+      </div>
+      <div class="email-field-row">
+        <div class="email-field">
+          <label>PORTA</label>
+          <input type="number" id="emailPort" value="587" class="email-input">
+        </div>
+        <div class="email-field">
+          <label>SEGURANÇA</label>
+          <label class="toggle-label-row">
+            <input type="checkbox" id="emailSecure">
+            <span>SSL/TLS</span>
+          </label>
+        </div>
+      </div>
+      <div class="email-field">
+        <label>USUÁRIO</label>
+        <input type="text" id="emailUser" placeholder="seu-email@gmail.com" class="email-input">
+      </div>
+      <div class="email-field">
+        <label>SENHA / APP PASSWORD</label>
+        <input type="password" id="emailPass" placeholder="Senha ou App Password" class="email-input">
+      </div>
+      <div class="email-field">
+        <label>REMETENTE (FROM)</label>
+        <input type="text" id="emailFrom" placeholder="Órbita <email@empresa.com>" class="email-input">
+      </div>
+      <div class="email-actions">
+        <button class="btn-cancel" id="emailTestBtn">Testar conexão</button>
+        <button class="btn-save" id="emailSaveBtn">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <!-- EMAIL SEND PANEL                                                      -->
+  <!-- ══════════════════════════════════════════════════════════════════════ -->
+  <div class="email-send-overlay" id="emailSendOverlay"></div>
+  <div class="email-send-panel" id="emailSendPanel">
+    <div class="email-config-header">
+      <h3 id="emailSendTitle">Enviar email</h3>
+      <button class="btn-icon-sm" id="emailSendClose" aria-label="Fechar">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="email-config-body">
+      <div class="email-field">
+        <label>DESTINATÁRIOS (separados por vírgula)</label>
+        <input type="text" id="emailSendTo" placeholder="email1@ex.com, email2@ex.com" class="email-input">
+      </div>
+      <div class="email-actions">
+        <button class="btn-cancel" id="emailSendCancelBtn">Cancelar</button>
+        <button class="btn-save" id="emailSendConfirmBtn">Enviar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading overlay global -->
+  <div id="globalLoadingOverlay" class="loading-overlay hidden" aria-hidden="true" role="status" aria-live="polite">
+    <div class="loading-backdrop"></div>
+    <div class="loading-center">
+      <svg class="loading-ring" viewBox="0 0 50 50" aria-hidden="true">
+        <circle class="ring-bg" cx="25" cy="25" r="20" fill="none" stroke-width="4"></circle>
+        <circle class="ring" cx="25" cy="25" r="20" fill="none" stroke-width="4" stroke-linecap="round"></circle>
+      </svg>
+      <div id="globalLoadingText" class="loading-text">Carregando…</div>
+    </div>
+  </div>
+
+  <!-- JS Modules (ordem importa: state e utils primeiro, init por último) -->
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/login.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/filter.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/meetings.js"></script>
+  <script src="js/startConfirm.js"></script>
+  <script src="js/chrono.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/inlineEdit.js"></script>
+  <script src="js/email.js"></script>
+  <script src="js/init.js"></script>
+</body>
+</html>
