@@ -300,38 +300,33 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
   const baseUrl = options.baseUrl || '';
   const meetingLink = options.meetingLink || baseUrl || '#';
 
-  // Logo: em email usamos CID; em preview usamos URL absoluta.
-  const logoHtml = options.logoUrl
-    ? `<img src="${options.logoUrl}" alt="Órbita" style="height:42px;max-width:220px;display:block;margin:0 auto;" />`
-    : `<div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;">Órbita</div>`;
-
+  // NÃO ENVIA IMAGEM, só o nome estilizado
   return `
     <div style="margin:0;padding:26px 0;background:#f3f4f6;font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
       <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 18px 45px rgba(15,23,42,0.08);overflow:hidden;">
         <div style="padding:28px 20px 18px;text-align:center;">
-          ${logoHtml}
+          <div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;">Órbita</div>
         </div>
 
-        <div style="padding:18px 34px 30px;text-align:center;">
-          <div style="font-size:18px;color:${textMain};line-height:1.4;margin:0 auto 10px;max-width:560px;">
-            A Reunião <span style="color:${primary};font-weight:700;">${meeting.name || 'Reunião'}</span>
-            do dia <span style="color:${primary};font-weight:700;">${dateLabel}</span>
-            às <span style="color:${primary};font-weight:700;">${timeLabel}</span> foi finalizada!
-          </div>
-
-          <div style="font-size:13px;color:${textMuted};margin:0 auto 18px;max-width:520px;">
-            Duração: <span style="color:${textMain};font-weight:600;">${durationLabel}</span>.
-            A ata desta reunião está em anexo em PDF.
-          </div>
-
-          <div style="margin-top:18px;">
-            <a href="${meetingLink}" style="display:inline-block;background:${primary};color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:999px;font-weight:700;font-size:14px;">
-              Ver Reunião
-            </a>
-          </div>
-
-          <div style="margin-top:16px;font-size:12px;color:${textMuted};">
-            Ou acesse o link para ver a reunião: <a href="${meetingLink}" style="color:${primary};">${meetingLink}</a>
+        <div style="padding:18px 34px 30px;">
+          <div style="text-align:center;">
+            <div style="font-size:18px;color:${textMain};line-height:1.4;margin:0 auto 10px;max-width:620px;">
+              A Reunião <span style="color:${primary};font-weight:700;">${meeting.name || 'Reunião'}</span>
+              do dia <span style="color:${primary};font-weight:700;">${dateLabel}</span>
+              às <span style="color:${primary};font-weight:700;">${timeLabel}</span> foi finalizada!
+            </div>
+            <div style="font-size:13px;color:${textMuted};margin:0 auto 18px;max-width:620px;">
+              Duração: <span style="color:${textMain};font-weight:600;">${durationLabel}</span>.
+              A ata desta reunião está em anexo em PDF.
+            </div>
+            <div style="margin-top:18px;">
+              <a href="${meetingLink}" style="display:inline-block;background:${primary};color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:999px;font-weight:700;font-size:14px;">
+                Ver Reunião
+              </a>
+            </div>
+            <div style="margin-top:16px;font-size:12px;color:${textMuted};">
+              Ou acesse o link para ver a reunião: <a href="${meetingLink}" style="color:${primary};">${meetingLink}</a>
+            </div>
           </div>
         </div>
 
@@ -1025,12 +1020,6 @@ app.put('/api/meetings/:id/complete', async (req, res) => {
       const subject = `Reunião finalizada: ${meeting.name || 'Reunião'} - ${dateLabel}`;
 
       const attachments = [
-        ...(logoBuf ? [{
-          filename: 'orbita.png',
-          content: logoBuf,
-          cid: logoCid,
-          contentType: 'image/png'
-        }] : []),
         {
           filename: pdfFilename,
           content: pdfBuffer,
