@@ -94,6 +94,8 @@ function resetLoginUI() {
 }
 
 function setupLogin() {
+  document.getElementById('loginScreen').classList.remove('hidden');
+  document.getElementById('appLayout').style.display = 'none';
   const screen   = document.getElementById('loginScreen');
   const form     = document.getElementById('loginForm');
   const nameIn   = document.getElementById('loginName');

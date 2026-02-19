@@ -678,7 +678,7 @@ function renderAtaItemCards(items, renderItem) {
 
 
 function showMeetingCompletionCard(meeting) {
-  return;
+  return
 }
 
 function getActiveRightTab() {

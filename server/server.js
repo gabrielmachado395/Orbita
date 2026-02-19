@@ -238,7 +238,7 @@ function buildMeetingCreatedHtml(meeting) {
     <div style="margin:0;padding:26px 0;background:#f3f4f6;font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
       <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 18px 45px rgba(15,23,42,0.08);overflow:hidden;">
         <div style="padding:28px 20px 18px;text-align:center;">
-          <div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;">Órbita</div>
+          <div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;"></div>
         </div>
 
         <div style="padding:18px 34px 30px;">
@@ -262,7 +262,7 @@ function buildMeetingCreatedHtml(meeting) {
         </div>
 
         <div style="padding:14px 24px 18px;border-top:1px solid #edf2f7;font-size:12px;color:${textMuted};text-align:center;">
-          Este email foi enviado automaticamente pelo Órbita.
+          Este email foi enviado automaticamente.
         </div>
       </div>
     </div>
@@ -271,12 +271,12 @@ function buildMeetingCreatedHtml(meeting) {
 
 function getOrbitaLogoPngBuffer() {
   try {
-    const logoPath = path.join(ROOT_DIR, 'Órbita.png');
+    const logoPath = path.join(ROOT_DIR);
     if (fs.existsSync(logoPath)) {
       return fs.readFileSync(logoPath);
     }
   } catch (e) {
-    console.warn('Não foi possível carregar Órbita.png:', e.message);
+    console.warn('Não foi possível carregar:', e.message);
   }
   return null;
 }
@@ -305,7 +305,7 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
     <div style="margin:0;padding:26px 0;background:#f3f4f6;font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
       <div style="max-width:720px;margin:0 auto;background:#ffffff;border-radius:16px;border:1px solid #e5e7eb;box-shadow:0 18px 45px rgba(15,23,42,0.08);overflow:hidden;">
         <div style="padding:28px 20px 18px;text-align:center;">
-          <div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;">Órbita</div>
+          <div style="font-size:28px;font-weight:800;letter-spacing:0.02em;color:${primary};text-align:center;"></div>
         </div>
 
         <div style="padding:18px 34px 30px;">
@@ -331,7 +331,7 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
         </div>
 
         <div style="padding:14px 24px 18px;border-top:1px solid #edf2f7;font-size:12px;color:${textMuted};text-align:center;">
-          Este email foi enviado automaticamente pelo Órbita.
+          Este email foi enviado automaticamente.
         </div>
       </div>
     </div>
@@ -396,19 +396,7 @@ function buildAtaPdfBuffer(meeting) {
       const right = pageWidth - doc.page.margins.right;
       const contentWidth = right - left;
 
-      // Header
-      const brandY = 44;
-      if (logoBuf) {
-        try {
-          doc.image(logoBuf, left, brandY, { fit: [26, 26] });
-        } catch {}
-      }
 
-      doc
-        .fillColor(primary)
-        .font('Helvetica-Bold')
-        .fontSize(18)
-        .text('Órbita', left + (logoBuf ? 34 : 0), brandY + 3, { width: contentWidth });
 
       doc
         .fillColor(textMain)
@@ -564,7 +552,7 @@ function buildAtaPdfBuffer(meeting) {
       doc
         .fontSize(9)
         .fillColor(textMuted)
-        .text('Gerado automaticamente pelo Órbita.', left, doc.page.height - 60, { width: contentWidth, align: 'center' });
+        .text('Gerado automaticamente .', left, doc.page.height - 60, { width: contentWidth, align: 'center' });
 
       doc.end();
     } catch (e) {
@@ -578,7 +566,7 @@ function buildTaskNotificationHtml(meeting, task) {
   return `
     <div style="font-family: 'Inter', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #0d1b2a; color: #e0e6ed; border-radius: 12px; overflow: hidden;">
       <div style="background: linear-gradient(135deg, #3a7d44, #2d6235); padding: 24px 32px;">
-        <h1 style="margin: 0; font-size: 22px; color: #fff;">Órbita</h1>
+        <h1 style="margin: 0; font-size: 22px; color: #fff;"></h1>
         <p style="margin: 6px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">Nova tarefa atribuída</p>
       </div>
       <div style="padding: 28px 32px;">
@@ -588,7 +576,7 @@ function buildTaskNotificationHtml(meeting, task) {
         </div>
       </div>
       <div style="padding: 16px 32px; border-top: 1px solid #1b2b43; font-size: 12px; color: #485a75;">
-        Este email foi enviado automaticamente pelo Órbita.
+        Este email foi enviado automaticamente.
       </div>
     </div>
   `;
@@ -600,12 +588,12 @@ app.use(express.json({ limit: '120mb' }));
 app.use(express.static(path.join(__dirname, '..', 'public')));
 
 const ROOT_DIR = path.join(__dirname, '..');
-app.get(['/Órbita.png', '/%C3%93rbita.png'], (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, 'Órbita.png'));
+app.get([], (req, res) => {
+  res.sendFile(path.join(ROOT_DIR));
 });
 
-app.get(['/Órbita-convertido-de-png.webp', '/%C3%93rbita-convertido-de-png.webp'], (req, res) => {
-  res.sendFile(path.join(ROOT_DIR, 'Órbita-convertido-de-png.webp'));
+app.get([], (req, res) => {
+  res.sendFile(path.join(ROOT_DIR));
 });
 
 // ─── Dados em memória ─────────────────────────────────────────────────────────
@@ -1441,11 +1429,11 @@ app.post('/api/email/test', async (req, res) => {
   if (!to) return res.status(400).json({ error: 'Informe o email de destino' });
   const result = await sendEmail({
     to,
-    subject: 'Órbita - Teste de configuração de email',
+    subject: 'Teste de configuração de email',
     html: `
       <div style="font-family:'Inter',Arial,sans-serif;max-width:600px;margin:0 auto;background:#0d1b2a;color:#e0e6ed;border-radius:12px;overflow:hidden;">
         <div style="background:linear-gradient(135deg,#3a7d44,#2d6235);padding:24px 32px;">
-          <h1 style="margin:0;font-size:22px;color:#fff;">Órbita</h1>
+          <h1 style="margin:0;font-size:22px;color:#fff;"></h1>
         </div>
         <div style="padding:28px 32px;">
           <p style="font-size:15px;">A configuração de email está funcionando corretamente!</p>
@@ -1580,5 +1568,5 @@ app.get('*', (req, res) => {
 // ─── Start ────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
-  console.log(`✓ Órbita rodando em http://localhost:${PORT}`);
+  console.log(`✓ Projeto rodando em http://localhost:${PORT}`);
 });
