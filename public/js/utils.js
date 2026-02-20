@@ -91,3 +91,71 @@ async function withLoading(promiseOrFn, message = 'Processando…') {
     hideLoading();
   }
 }
+/**
+ * Exibe um mini-card de aviso (posição junto ao elemento anchor se fornecido).
+ * Uso: showMiniCard('Funcionalidade em construção', { anchor: btn, duration: 3000 });
+ */
+function showMiniCard(message = 'Funcionalidade em construção', { anchor = null, duration = 3000 } = {}) {
+  try {
+    const card = document.createElement('div');
+    card.className = 'mini-card coming-soon';
+    card.setAttribute('role', 'status');
+    card.textContent = message;
+
+    // estilo inline mínimo para garantir aparência mesmo sem CSS extra
+    Object.assign(card.style, {
+      position: 'fixed',
+      zIndex: 2200,
+      padding: '10px 14px',
+      borderRadius: '10px',
+      background: '#0f1724',
+      color: '#e6f6ff',
+      boxShadow: '0 8px 24px rgba(2,6,23,0.45)',
+      fontSize: '13px',
+      fontWeight: '600',
+      opacity: '0',
+      transition: 'opacity 180ms ease, transform 180ms ease',
+      pointerEvents: 'auto'
+    });
+
+    document.body.appendChild(card);
+
+    // posicionamento: perto do anchor se houver, senão canto inferior direito
+    if (anchor && anchor.getBoundingClientRect) {
+      const r = anchor.getBoundingClientRect();
+      const top = Math.max(8, r.top + window.scrollY);
+      const left = Math.max(8, r.right + 8 + window.scrollX);
+      card.style.top = `${top}px`;
+      card.style.left = `${left}px`;
+      card.style.transform = 'translateY(-6px)';
+    } else {
+      card.style.bottom = '18px';
+      card.style.right = '18px';
+      card.style.transform = 'translateY(6px)';
+    }
+
+    // entrada
+    requestAnimationFrame(() => {
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    });
+
+    // remove após duration
+    setTimeout(() => {
+      card.style.opacity = '0';
+      card.style.transform = 'translateY(-6px)';
+      setTimeout(() => { try { card.remove(); } catch (e) {} }, 220);
+    }, duration);
+  } catch (e) {
+    // fallback silencioso
+    try { alert(message); } catch (e){/*ignore*/ }
+  }
+}
+
+// Listener opcional: ativa para elementos com data-coming-soon
+document.addEventListener('click', function (e) {
+  const target = e.target.closest && e.target.closest('[data-coming-soon]');
+  if (!target) return;
+  e.preventDefault();
+  showMiniCard(target.getAttribute('data-coming-soon') || 'Funcionalidade em construção', { anchor: target, duration: 3000 });
+});

@@ -330,6 +330,45 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
   `;
 }
 
+ /* Calcula próxima data de reunião baseado na regra de recorrência.
+ * Suporta: 'never', 'weekly', '15days', 'monthly'
+ */
+function computeNextMeetingDate(recurrence, dateStr) {
+  if (!dateStr) return null;
+  const parts = String(dateStr).split('-').map(Number);
+  if (parts.length < 3) return null;
+  const d = new Date(parts[0], parts[1] - 1, parts[2]);
+
+  switch ((recurrence || '').toLowerCase()) {
+    case 'weekly':
+    case 'every_week':
+    case 'toda semana':
+      d.setDate(d.getDate() + 7);
+      break;
+    case '15days':
+    case 'biweekly':
+    case '15 dias':
+      d.setDate(d.getDate() + 15);
+      break;
+    case 'monthly':
+    case 'todo mês':
+      const day = d.getDate();
+      const nextMonth = d.getMonth() + 1;
+      const year = d.getFullYear();
+      const candidate = new Date(year, nextMonth, 1);
+      candidate.setDate(day);
+      d.setTime(candidate.getTime());
+      break;
+    default:
+      return null;
+  }
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function buildAtaPdfBuffer(meeting) {
   const primary = '#2187ab';
   const textMain = '#111827';
@@ -958,7 +997,6 @@ app.put('/api/meetings/:id/complete', async (req, res) => {
 
     saveMeetingsToDisk();
 
-    // Adicione logs antes de cada etapa crítica
     notifications.push({
       id: nextNotifId++,
       title: 'Reunião finalizada',
@@ -969,6 +1007,28 @@ app.put('/api/meetings/:id/complete', async (req, res) => {
       type: 'meeting',
       createdAt: new Date().toISOString()
     });
+
+    if (meeting.recurrence && String(meeting.recurrence).toLowerCase() !== 'never') {
+      const nextDate = computeNextMeetingDate(meeting.recurrence, meeting.date);
+      if (nextDate) {
+        meeting.date = nextDate;
+        meeting.status = 'not_started';
+        delete meeting.startedAt;
+        delete meeting.completedAt;
+        meeting.actualDurationSeconds = 0;
+        notifications.push({
+          id: nextNotifId++,
+          title: 'Próxima ocorrência agendada',
+          message: `Próxima ocorrência da reunião "${meeting.name}" agendada para ${nextDate}.`,
+          read: false,
+          readBy: [],
+          recipients: Array.isArray(meeting.members) ? meeting.members : [],
+          type: 'meeting',
+          createdAt: new Date().toISOString()
+        });
+        saveMeetingsToDisk();
+      }
+    }
     
     try {
       const recipients = getParticipantEmails(meeting);
