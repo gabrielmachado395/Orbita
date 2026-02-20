@@ -270,14 +270,6 @@ function buildMeetingCreatedHtml(meeting) {
 }
 
 function getOrbitaLogoPngBuffer() {
-  try {
-    const logoPath = path.join(ROOT_DIR);
-    if (fs.existsSync(logoPath)) {
-      return fs.readFileSync(logoPath);
-    }
-  } catch (e) {
-    console.warn('Não foi possível carregar:', e.message);
-  }
   return null;
 }
 
@@ -381,8 +373,6 @@ function buildAtaPdfBuffer(meeting) {
   const department = meeting.department || '-';
   const responsible = resolveUserName(meeting.responsible || '-');
 
-  const logoBuf = getOrbitaLogoPngBuffer();
-
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 48 });
@@ -396,8 +386,10 @@ function buildAtaPdfBuffer(meeting) {
       const right = pageWidth - doc.page.margins.right;
       const contentWidth = right - left;
 
+      // posição do cabeçalho (antes havia logo aqui); mantemos um brandY fixo
+      const brandY = 44;
 
-
+      // Título (nome da reunião)
       doc
         .fillColor(textMain)
         .fontSize(22)

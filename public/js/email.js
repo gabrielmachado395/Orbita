@@ -200,19 +200,17 @@ function openAtaEmailSend() {
 
   openEmailSend('Enviar ata por email', async (emails) => {
     try {
-      await withLoading(async () => {
-        const res = await fetch(`${API}/api/email/send-ata/${state.currentMeeting.id}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ to: emails })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          showToast('Email enviado! Verifiquem também a caixa de spam.', 'success');
-        } else {
-          showToast(data.error || 'Erro ao enviar ata', 'error');
-        }
-      }, 'Enviando ata…');
+      const res = await fetch(`${API}/api/email/send-ata/${state.currentMeeting.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: emails })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Email enviado! Verifiquem também a caixa de spam.', 'success');
+      } else {
+        showToast(data.error || 'Erro ao enviar ata', 'error');
+      }
     } catch (e) {
       showToast('Erro ao enviar ata por email', 'error');
     }
@@ -226,14 +224,11 @@ async function openAtaEmailPreview() {
   }
 
   try {
-    await withLoading(async () => {
-      const res = await fetch(`${API}/api/email/preview-ata/${state.currentMeeting.id}`);
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || 'Erro ao carregar pré-visualização');
-      }
-    }, 'Carregando pré-visualização…');
-
+    const res = await fetch(`${API}/api/email/preview-ata/${state.currentMeeting.id}`);
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Erro ao carregar pré-visualização');
+    }
 
     const win = window.open('', '_blank');
     if (!win) {
@@ -270,23 +265,26 @@ async function openAtaEmailPreview() {
 
 /* ── Notify members about new meeting ──────────────────────────────────── */
 
-async function openMeetingNotifyEmail(meetingId) {
-  if (!meetingId) return { ok: false, error: 'Meeting id faltando' };
+function openMeetingNotifyEmail(meetingId) {
+  if (!meetingId) return;
 
   const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
   const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
 
-  return await withLoading(async () => {
-    try {
-      const res = await fetch(`${API}/api/email/notify-meeting/${meetingId}${query}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
+  fetch(`${API}/api/email/notify-meeting/${meetingId}${query}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({})
+  })
+    .then(async (res) => {
       const data = await res.json().catch(() => ({}));
-      return { ok: res.ok, data };
-    } catch (e) {
-      return { ok: false, error: e.message || 'Erro de rede' };
-    }
-  }, 'Enviando notificações…');
+      if (res.ok) {
+        showToast('Email enviado! Verifiquem também a caixa de spam.', 'success');
+        return;
+      }
+      showToast(data.error || 'Erro ao notificar membros por email', 'error');
+    })
+    .catch(() => {
+      showToast('Erro ao enviar notificação automática', 'error');
+    });
 }
