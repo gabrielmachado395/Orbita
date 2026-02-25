@@ -269,7 +269,7 @@ function buildMeetingCreatedHtml(meeting) {
   `;
 }
 
-function getOrbitaLogoPngBuffer() {
+function getPlataformaLogoPngBuffer() {
   return null;
 }
 
@@ -1037,8 +1037,8 @@ app.put('/api/meetings/:id/complete', async (req, res) => {
       }
 
       const baseUrl = getBaseUrl(req);
-      const logoBuf = getOrbitaLogoPngBuffer();
-      const logoCid = 'orbita-logo';
+      const logoBuf = getPlataformaLogoPngBuffer();
+      const logoCid = 'plataforma-logo';
       const meetingLink = baseUrl;
       const html = buildMeetingCompletedHtml(meeting, {
         baseUrl,
@@ -1520,8 +1520,8 @@ app.post('/api/email/send-ata/:id', async (req, res) => {
   }
 
   const baseUrl = getBaseUrl(req);
-  const logoBuf = getOrbitaLogoPngBuffer();
-  const logoCid = 'orbita-logo';
+  const logoBuf = getPlataformaLogoPngBuffer();
+  const logoCid = 'plataforma-logo';
   const meetingLink = baseUrl;
   const html = buildMeetingCompletedHtml(meeting, {
     baseUrl,
@@ -1544,7 +1544,7 @@ app.post('/api/email/send-ata/:id', async (req, res) => {
 
   const attachments = [
     ...(logoBuf ? [{
-      filename: 'orbita.png',
+      filename: 'plataforma.png',
       content: logoBuf,
       cid: logoCid,
       contentType: 'image/png'
@@ -1568,7 +1568,7 @@ app.get('/api/email/preview-ata/:id', (req, res) => {
 
   const baseUrl = getBaseUrl(req);
   const meetingLink = baseUrl;
-  const logoUrl = `${baseUrl}/%C3%93rbita.png`;
+  const logoUrl = `${baseUrl}/Plataforma.png`;
   const html = buildMeetingCompletedHtml(meeting, { baseUrl, meetingLink, logoUrl });
   res.json({ html });
 });

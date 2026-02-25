@@ -10,7 +10,7 @@
 
 .profile-panel {
   position: fixed; z-index: 550;
-  bottom: 80px; right: 16px;
+  bottom: 80px; left: 16px;
   width: 420px;
   background: var(--sidebar-bg); border: 1px solid var(--border);
   border-radius: var(--radius-lg); overflow: hidden;

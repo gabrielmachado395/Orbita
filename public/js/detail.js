@@ -26,17 +26,15 @@ function setupDetailView() {
       if (!text || !state.currentMeeting) return;
 
       try {
-        const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-        const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-        const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/highlights${query}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
-        });
-        if (!res.ok) throw new Error('Erro');
-        const hl = await res.json();
         state.currentMeeting.highlights = state.currentMeeting.highlights || [];
-        state.currentMeeting.highlights.push(hl);
+        state.currentMeeting.highlights.push({
+          id: 'hl_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+          text,
+          checked: false,
+          assignee: getCurrentUserInitials(),
+          createdAt: new Date().toISOString()
+        });
+        persistCurrentMeetingLocal();
         input.value = '';
         renderHighlights();
       } catch (err) {
@@ -76,18 +74,16 @@ function setupDetailView() {
         if (!text || !state.currentMeeting) return;
 
         try {
-          const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-          const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-          const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/pautas${query}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text })
-          });
-          if (!res.ok) throw new Error('Erro');
-          const pauta = await res.json();
-
           state.currentMeeting.pautas = state.currentMeeting.pautas || [];
-          state.currentMeeting.pautas.push(pauta);
+          state.currentMeeting.pautas.push({
+            id: 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+            text,
+            description: '',
+            checked: false,
+            assignee: getCurrentUserInitials(),
+            createdAt: new Date().toISOString()
+          });
+          persistCurrentMeetingLocal();
           pautaInput.value = '';
           renderPautas();
         } catch (err) {
@@ -141,20 +137,10 @@ function setupDetailView() {
 
   document.getElementById('btnDetailSettings').addEventListener('click', async () => {
     if (!state.currentMeeting) return;
-
-    try {
-      const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-      const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-      const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}${query}`);
-      if (res.ok) {
-        const freshMeeting = await res.json();
-        state.currentMeeting = freshMeeting;
-        if (Array.isArray(state.allMeetings)) {
-          const idx = state.allMeetings.findIndex(m => m.id === freshMeeting.id);
-          if (idx !== -1) state.allMeetings[idx] = freshMeeting;
-        }
-      }
-    } catch (e) {
+    const freshMeeting = fetchMeetingByIdForCurrentUser(state.currentMeeting.id);
+    if (freshMeeting) {
+      state.currentMeeting = freshMeeting;
+      persistCurrentMeetingLocal();
     }
 
     if (!canCurrentUserEditMeeting(state.currentMeeting)) {
@@ -165,15 +151,56 @@ function setupDetailView() {
   });
 }
 
+function switchMainView(toDetail) {
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+  const mainArea = document.querySelector('.main-area');
+  if (!listView || !detailView) return;
+
+  const fromEl = toDetail ? listView : detailView;
+  const toEl = toDetail ? detailView : listView;
+  const directionClass = toDetail ? 'view-forward' : 'view-backward';
+  const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduceMotion || switchMainView._running) {
+    fromEl.classList.add('hidden');
+    toEl.classList.remove('hidden');
+    return;
+  }
+
+  switchMainView._running = true;
+  toEl.classList.remove('hidden');
+  if (mainArea) mainArea.classList.add('view-switching');
+
+  const cleanupClasses = ['view-animating', 'view-enter', 'view-exit', 'view-forward', 'view-backward', 'is-active', 'is-inactive'];
+  [fromEl, toEl].forEach((el) => el.classList.remove(...cleanupClasses));
+
+  toEl.classList.add('view-animating', 'view-enter', directionClass);
+  fromEl.classList.add('view-animating', 'view-exit', directionClass);
+
+  requestAnimationFrame(() => {
+    toEl.classList.add('is-active');
+    fromEl.classList.add('is-inactive');
+  });
+
+  const finish = () => {
+    fromEl.classList.add('hidden');
+    [fromEl, toEl].forEach((el) => el.classList.remove(...cleanupClasses));
+    if (mainArea) mainArea.classList.remove('view-switching');
+    switchMainView._running = false;
+  };
+
+  setTimeout(finish, 430);
+}
+
 function openMeetingDetail(meeting) {
   state.currentMeeting = meeting;
   state.currentView = 'detail';
   state.filterResp = null;
   state.filterStatus = null;
 
-  fetchMeetingByIdForCurrentUser(meeting.id).then(freshMeeting => {
-    if (!freshMeeting || !state.currentMeeting || state.currentMeeting.id !== freshMeeting.id) return;
-
+  const freshMeeting = fetchMeetingByIdForCurrentUser(meeting.id);
+  if (freshMeeting && state.currentMeeting && state.currentMeeting.id === freshMeeting.id) {
     state.currentMeeting = freshMeeting;
 
     if (Array.isArray(state.allMeetings)) {
@@ -189,7 +216,7 @@ function openMeetingDetail(meeting) {
     renderHighlights();
     renderPautas();
     renderRightColumn();
-  });
+  }
 
   document.getElementById('detailTitle').textContent = meeting.name;
 
@@ -290,8 +317,7 @@ function openMeetingDetail(meeting) {
     resetChrono();
   }
 
-  document.getElementById('listView').classList.add('hidden');
-  document.getElementById('detailView').classList.remove('hidden');
+  switchMainView(true);
 }
 
 function closeDetail() {
@@ -299,8 +325,7 @@ function closeDetail() {
   state.currentMeeting = null;
   stopChrono();
 
-  document.getElementById('detailView').classList.add('hidden');
-  document.getElementById('listView').classList.remove('hidden');
+  switchMainView(false);
 
   reloadMeetings();
 }
@@ -309,17 +334,35 @@ function getCurrentUserInitials() {
   return (state.currentUser && state.currentUser.initials) || 'GM';
 }
 
-async function fetchMeetingByIdForCurrentUser(meetingId) {
+function fetchMeetingByIdForCurrentUser(meetingId) {
   if (!meetingId) return null;
-  try {
-    const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-    const res = await fetch(`${API}/api/meetings/${meetingId}${query}`);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch (e) {
-    return null;
+  if (typeof getMeetingByIdLocal === 'function') {
+    return getMeetingByIdLocal(meetingId);
   }
+  return null;
+}
+
+function persistCurrentMeetingLocal() {
+  if (!state.currentMeeting || !state.currentMeeting.id) return null;
+  if (typeof getLocalMeetings !== 'function' || typeof saveLocalMeetings !== 'function') {
+    return state.currentMeeting;
+  }
+
+  const allMeetings = getLocalMeetings();
+  const idx = allMeetings.findIndex((m) => String(m.id) === String(state.currentMeeting.id));
+
+  if (idx >= 0) allMeetings[idx] = state.currentMeeting;
+  else allMeetings.unshift(state.currentMeeting);
+
+  saveLocalMeetings(allMeetings);
+  state.allMeetings = allMeetings;
+
+  if (Array.isArray(state.meetings)) {
+    const listIdx = state.meetings.findIndex((m) => String(m.id) === String(state.currentMeeting.id));
+    if (listIdx >= 0) state.meetings[listIdx] = state.currentMeeting;
+  }
+
+  return state.currentMeeting;
 }
 
 function canCurrentUserEditMeeting(meeting) {
@@ -348,25 +391,8 @@ function readFileAsDataURL(file) {
 
 async function persistMeetingAttachments(attachments) {
   if (!state.currentMeeting || !state.currentMeeting.id) return;
-  const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-  const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-  const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}${query}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ attachments })
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Erro ao salvar anexos');
-  }
-
-  const updated = await res.json();
-  state.currentMeeting = updated;
-  if (Array.isArray(state.allMeetings)) {
-    const idx = state.allMeetings.findIndex(m => m.id === updated.id);
-    if (idx !== -1) state.allMeetings[idx] = updated;
-  }
+  state.currentMeeting.attachments = Array.isArray(attachments) ? attachments : [];
+  persistCurrentMeetingLocal();
 }
 
 async function handleAttachmentUpload(e) {
@@ -502,67 +528,63 @@ function renderAttachments() {
 
 // Função utilitária para atualizar reuniões e detalhes
 async function refreshMeetingsAndDetails(meetingId, user) {
-  // Atualiza lista de reuniões
-  const meetingsRes = await fetch(`${API}/api/meetings?user=${user}`);
-  if (meetingsRes.ok) {
-    state.meetings = await meetingsRes.json();
-    if (typeof renderMeetings === 'function') renderMeetings();
-  }
-  // Atualiza detalhes da reunião atual
-  const detailRes = await fetch(`${API}/api/meetings/${meetingId}?user=${user}`);
-  if (detailRes.ok) {
-    state.currentMeeting = await detailRes.json();
-    // Adicione estas linhas:
-    renderHighlights();
-    renderPautas();
-    renderRightColumn();
+  state.allMeetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : (state.allMeetings || []);
+  if (typeof applyMeetingFilters === 'function') applyMeetingFilters();
+  if (meetingId) {
+    const localMeeting = fetchMeetingByIdForCurrentUser(meetingId);
+    if (localMeeting) {
+      state.currentMeeting = localMeeting;
+      renderHighlights();
+      renderPautas();
+      renderRightColumn();
+    }
   }
 }
 
 // Exemplo de uso após iniciar reunião
 async function startMeeting(meetingId, user) {
-  const res = await fetch(`${API}/api/meetings/${meetingId}/start?user=${user}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ presentMembers: [user] })
-  });
-  if (!res.ok) {
-    showToast('Erro ao iniciar reunião', 'error');
+  const meeting = fetchMeetingByIdForCurrentUser(meetingId);
+  if (!meeting) {
+    showToast('Reunião não encontrada', 'error');
     return;
   }
-  // Aguarde o backend atualizar e só então faça o fetch atualizado
-  await new Promise(resolve => setTimeout(resolve, 300)); // pequeno delay para garantir escrita no disco
+  const userInitials = (user && user.length <= 5) ? user : getCurrentUserInitials();
+  const presentMembers = Array.from(new Set([...(meeting.presentMembers || []), userInitials]));
+  meeting.status = 'in_progress';
+  meeting.presentMembers = presentMembers;
+  meeting.startedAt = meeting.startedAt || new Date().toISOString();
+  state.currentMeeting = meeting;
+  persistCurrentMeetingLocal();
   await refreshMeetingsAndDetails(meetingId, user);
   showToast('Reunião iniciada!', 'success');
 }
 
 // Exemplo de uso após finalizar reunião
 async function completeMeeting(meetingId, user, durationSeconds) {
-  const res = await fetch(`${API}/api/meetings/${meetingId}/complete?user=${user}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ durationSeconds })
-  });
-  if (!res.ok) {
-    showToast('Erro ao finalizar reunião', 'error');
+  const meeting = fetchMeetingByIdForCurrentUser(meetingId);
+  if (!meeting) {
+    showToast('Reunião não encontrada', 'error');
     return;
   }
+  meeting.status = 'completed';
+  meeting.actualDurationSeconds = Number(durationSeconds || 0);
+  meeting.completedAt = new Date().toISOString();
+  state.currentMeeting = meeting;
+  persistCurrentMeetingLocal();
   await refreshMeetingsAndDetails(meetingId, user);
   showToast('Reunião finalizada!', 'success');
 }
 
 // Exemplo de uso após criar reunião (adapte conforme fluxo)
 async function createMeeting(payload, user) {
-  const res = await fetch(`${API}/api/meetings?user=${user}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-  if (!res.ok) {
-    showToast('Erro ao criar reunião', 'error');
-    return;
-  }
-  const newMeeting = await res.json();
+  const newMeeting = {
+    id: payload.id || ('m_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7)),
+    ...payload
+  };
+  const allMeetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : [];
+  allMeetings.unshift(newMeeting);
+  if (typeof saveLocalMeetings === 'function') saveLocalMeetings(allMeetings);
+  state.allMeetings = allMeetings;
   await refreshMeetingsAndDetails(newMeeting.id, user);
   showToast('Reunião criada!', 'success');
 }
@@ -706,25 +728,8 @@ function getRightTabMeta() {
 
 async function persistMeetingWorkItems(payload) {
   if (!state.currentMeeting || !state.currentMeeting.id) return;
-  const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-  const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-  const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}${query}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
-
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || 'Erro ao salvar');
-  }
-
-  const updated = await res.json();
-  state.currentMeeting = updated;
-  if (Array.isArray(state.allMeetings)) {
-    const idx = state.allMeetings.findIndex(m => m.id === updated.id);
-    if (idx !== -1) state.allMeetings[idx] = updated;
-  }
+  Object.assign(state.currentMeeting, payload || {});
+  persistCurrentMeetingLocal();
 }
 
 function renderRightColumn() {
@@ -733,7 +738,7 @@ function renderRightColumn() {
   if (!area || !state.currentMeeting) return;
 
   const canManage = canCurrentUserEditMeeting(state.currentMeeting);
-  const canCheckItems = canManage && canManageMeetingItems(state.currentMeeting);
+  const canCheckItems = canManage && canManageMeetingItems(state.currentMeeting, state.currentUser);
   const meta = getRightTabMeta();
   const items = Array.isArray(state.currentMeeting[meta.key]) ? state.currentMeeting[meta.key] : [];
 
@@ -885,25 +890,8 @@ function renderResponsibleFilterAvatar(initials) {
 
 async function persistCurrentMeetingPautas() {
   if (!state.currentMeeting || !state.currentMeeting.id) return;
-
-  const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-  const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-  const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}${query}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ pautas: state.currentMeeting.pautas || [] })
-  });
-
-  if (!res.ok) {
-    throw new Error('Erro ao persistir pautas');
-  }
-
-  const updated = await res.json();
-  state.currentMeeting = updated;
-  if (Array.isArray(state.allMeetings)) {
-    const idx = state.allMeetings.findIndex(m => m.id === updated.id);
-    if (idx !== -1) state.allMeetings[idx] = updated;
-  }
+  state.currentMeeting.pautas = state.currentMeeting.pautas || [];
+  persistCurrentMeetingLocal();
 }
 
 function renderHighlights() {
@@ -977,12 +965,8 @@ function renderHighlights() {
     btn.addEventListener('click', async () => {
       const hlId = btn.dataset.hlDel;
       try {
-        const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-        const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-        await fetch(`${API}/api/meetings/${state.currentMeeting.id}/highlights/${hlId}${query}`, {
-          method: 'DELETE'
-        });
-        state.currentMeeting.highlights = highlights.filter(h => h.id !== hlId);
+        state.currentMeeting.highlights = (state.currentMeeting.highlights || []).filter(h => h.id !== hlId);
+        persistCurrentMeetingLocal();
         renderHighlights();
         showToast('Destaque removido', 'success');
       } catch (e) {
@@ -1019,14 +1003,8 @@ function renderHighlights() {
           return;
         }
         try {
-          const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-          const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-          await fetch(`${API}/api/meetings/${state.currentMeeting.id}/highlights/${hlId}${query}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: newText })
-          });
           hl.text = newText;
+          persistCurrentMeetingLocal();
           renderHighlights();
         } catch (e) {
           showToast('Erro ao editar', 'error');
@@ -1265,15 +1243,8 @@ function renderPautas() {
       }
 
       try {
-        const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-        const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-        const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/pautas/${id}${query}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ checked: !p.checked })
-        });
-        if (!res.ok) throw new Error('Erro');
         p.checked = !p.checked;
+        persistCurrentMeetingPautas();
         renderPautas();
       } catch (e) {
         showToast('Erro ao atualizar pauta', 'error');
@@ -1312,15 +1283,8 @@ function renderPautas() {
         const nextDescription = textarea.value.replace(/\r\n/g, '\n').trim();
 
         try {
-          const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-          const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-          const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/pautas/${id}${query}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ description: nextDescription })
-          });
-          if (!res.ok) throw new Error('Erro');
           p.description = nextDescription;
+          persistCurrentMeetingPautas();
           renderPautas();
           showToast('Descrição salva', 'success');
         } catch (e) {
@@ -1340,13 +1304,8 @@ function renderPautas() {
         return;
       }
       try {
-        const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-        const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-        const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/pautas/${id}${query}`, {
-          method: 'DELETE'
-        });
-        if (!res.ok) throw new Error('Erro');
-        state.currentMeeting.pautas = pautas.filter(x => x.id !== id);
+        state.currentMeeting.pautas = (state.currentMeeting.pautas || []).filter(x => x.id !== id);
+        persistCurrentMeetingPautas();
         renderPautas();
         showToast('Pauta removida', 'success');
       } catch (e) {
@@ -1402,11 +1361,12 @@ function setupColFilters() {
 
 // Atualiza objeto da reunião após ação
 if (state.currentMeeting && state.currentMeeting.id) {
-fetchMeetingByIdForCurrentUser(state.currentMeeting.id).then(meeting => {
-  state.currentMeeting = meeting;
-  if (typeof renderMeetingDetails === 'function') renderMeetingDetails(meeting);
-  if (typeof reloadMeetings === 'function') reloadMeetings();
-});
+  const meeting = fetchMeetingByIdForCurrentUser(state.currentMeeting.id);
+  if (meeting) {
+    state.currentMeeting = meeting;
+    if (typeof renderMeetingDetails === 'function') renderMeetingDetails(meeting);
+    if (typeof reloadMeetings === 'function') reloadMeetings();
+  }
 }
 
 function populateFilterResp() {

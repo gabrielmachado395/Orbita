@@ -5,10 +5,15 @@
 .meeting-header, .detail-header {
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
-  background: var(--card-bg);
+  background: linear-gradient(180deg, rgba(10, 18, 30, 0.92), rgba(11, 20, 34, 0.86));
+  backdrop-filter: blur(8px);
 }
 
-.header-accent-bar { height: 3px; background: var(--primary); width: 100%; }
+.header-accent-bar {
+  height: 3px;
+  background: linear-gradient(90deg, rgba(108, 230, 255, 0.28), var(--primary), rgba(108, 230, 255, 0.06));
+  width: 100%;
+}
 .header-content {
   display: flex;
   align-items: center;
@@ -21,7 +26,7 @@
   display: inline-block;
   display: inline-flex; align-items: center; justify-content: center;
   width: 100px; height: 84px;
-  background-image: url('/%C3%93rbita.png');
+  background-image: url('/Plataforma.png');
   background-repeat: no-repeat;
   background-position: center;
   background-size: contain;
@@ -32,17 +37,26 @@
 
 .btn-new-meeting {
   width: 28px; height: 28px; border-radius: var(--radius-full);
-  background: var(--primary); color: var(--primary-fg);
+  background: linear-gradient(135deg, #1f9ac3, #226ab9); color: var(--primary-fg);
+  border: 1px solid rgba(110, 214, 250, 0.52);
   display: flex; align-items: center; justify-content: center;
   transition: var(--transition);
 }
-.btn-new-meeting:hover { opacity: 0.85; transform: scale(1.05); }
+.btn-new-meeting:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 20px rgba(42, 165, 212, 0.45);
+}
 
 .btn-layout {
   padding: 8px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: rgba(184, 207, 229, 0.08);
   color: var(--text-muted); transition: var(--transition);
 }
-.btn-layout:hover { color: var(--text); border-color: var(--text-muted); }
+.btn-layout:hover {
+  color: var(--text);
+  border-color: rgba(42, 165, 212, 0.55);
+  background: rgba(42, 165, 212, 0.18);
+}
 
 /* Filter button */
 .header-filter { padding: 0 24px 10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -60,10 +74,13 @@
 .filter-chip-tag {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 5px 12px; border-radius: 999px;
-  background: rgba(19, 29, 46, 0.6); border: 1px solid var(--border);
+  background: rgba(12, 22, 35, 0.78); border: 1px solid var(--border);
   font-size: 0.7rem; color: var(--text); transition: var(--transition);
 }
-.filter-chip-tag:hover { border-color: var(--text-muted); }
+.filter-chip-tag:hover {
+  border-color: rgba(42, 165, 212, 0.55);
+  box-shadow: 0 0 16px rgba(42, 165, 212, 0.2);
+}
 .chip-label { color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .chip-value { color: var(--text); font-weight: 500; }
 .chip-remove {
@@ -78,13 +95,14 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 .chrono-area {
-  background: #1B263B;
+  background: rgba(12, 22, 35, 0.86);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
   border: 1px solid var(--border);
+  box-shadow: inset 0 0 0 1px rgba(181, 204, 228, 0.08);
   flex-shrink: 0;
 }
 
@@ -121,7 +139,8 @@
 }
 
 .chrono-play:hover {
-  opacity: 0.85;
+  filter: brightness(1.12);
+  text-shadow: 0 0 14px rgba(42, 165, 212, 0.5);
 }
 
 @media (max-width: 768px) {

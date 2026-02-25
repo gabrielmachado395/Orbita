@@ -3,28 +3,28 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  --bg-dark: #1B263B;
-  --bg-light: #E0E1DD;
-  --primary: #2187ab;
-  --primary-light: rgba(33, 135, 171, 0.14);
-  --primary-fg: #E0E1DD;
+  --bg-dark: #0a0f18;
+  --bg-light: #ecf7ff;
+  --primary: #1f9ac3;
+  --primary-light: rgba(42, 165, 212, 0.18);
+  --primary-fg: #f7fdff;
 
-  --card-bg: #253551;
-  --card-border: #31445e;
-  --card-hover-border: rgba(33, 135, 171, 0.5);
+  --card-bg: rgba(10, 18, 30, 0.86);
+  --card-border: rgba(181, 204, 228, 0.2);
+  --card-hover-border: rgba(42, 165, 212, 0.6);
 
-  --text: #E0E1DD;
-  --text-muted: #8a9ab5;
-  --text-dim: #5a6f8e;
+  --text: #e9f5ff;
+  --text-muted: rgba(194, 214, 232, 0.84);
+  --text-dim: rgba(158, 183, 206, 0.72);
 
-  --sidebar-bg: #131d2e;
-  --sidebar-border: #1e2d42;
-  --sidebar-hover: #1e2d42;
+  --sidebar-bg: rgba(8, 15, 26, 0.94);
+  --sidebar-border: rgba(181, 204, 228, 0.16);
+  --sidebar-hover: rgba(184, 207, 229, 0.12);
 
   --destructive: #ef4444;
   --warning: #eab308;
 
-  --border: #31445e;
+  --border: rgba(181, 204, 228, 0.2);
   --input-bg: transparent;
 
   --radius: 8px;
@@ -36,7 +36,7 @@
   --shadow-xl: 0 20px 60px rgba(0,0,0,0.4);
 
   --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --sidebar-width: 256px;
+  --sidebar-width: 324px;
 }
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -44,7 +44,10 @@ html { font-size: 16px; }
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #1B263B;
+  background:
+    radial-gradient(circle at 14% 20%, rgba(33, 135, 171, 0.22), transparent 34%),
+    radial-gradient(circle at 84% 80%, rgba(90, 170, 130, 0.18), transparent 38%),
+    #0a0f18;
   background-attachment: fixed;
   min-height: 100vh;
   color: var(--text);
@@ -77,10 +80,102 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 }
 .btn-icon-sm:hover { color: var(--text); }
 
+.magnetic-btn {
+  transition: transform .18s ease, box-shadow .2s ease, filter .2s ease;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .magnetic-btn {
+    transition: none !important;
+  }
+
+  #listView.view-animating,
+  #detailView.view-animating {
+    transition: none !important;
+  }
+
+  .main-area::after {
+    transition: none !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* APP LAYOUT                                                                 */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 .app-layout { display: flex; height: 100vh; overflow: hidden; }
-.main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+.main-area { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; position: relative; }
 
+.main-area::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  backdrop-filter: blur(0px);
+  background: radial-gradient(circle at 50% 30%, rgba(42, 165, 212, 0.1), rgba(8, 15, 26, 0.08));
+  transition: opacity .26s ease, backdrop-filter .34s ease;
+  z-index: 5;
+}
+
+.main-area.view-switching::after {
+  opacity: 1;
+  backdrop-filter: blur(4px);
+}
+
+#listView,
+#detailView {
+  will-change: opacity, transform;
+}
+
+#listView.view-animating,
+#detailView.view-animating {
+  position: absolute;
+  inset: 0;
+  transition: opacity .3s ease, transform .42s cubic-bezier(.2,.72,.2,1);
+}
+
+.view-forward.view-enter {
+  opacity: 0;
+  transform: translateX(26px) scale(0.985);
+  z-index: 3;
+}
+
+.view-forward.view-enter.is-active {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.view-forward.view-exit {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  z-index: 2;
+}
+
+.view-forward.view-exit.is-inactive {
+  opacity: 0;
+  transform: translateX(-22px) scale(0.992);
+}
+
+.view-backward.view-enter {
+  opacity: 0;
+  transform: translateX(-24px) scale(0.988);
+  z-index: 3;
+}
+
+.view-backward.view-enter.is-active {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+
+.view-backward.view-exit {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  z-index: 2;
+}
+
+.view-backward.view-exit.is-inactive {
+  opacity: 0;
+  transform: translateX(26px) scale(0.992);
+}

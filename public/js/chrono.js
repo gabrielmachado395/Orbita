@@ -101,22 +101,19 @@ async function stopChrono() {
     state.chronoSeconds > 0
   ) {
     try {
-      const result = await withLoading(async () => {
-        const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-        const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-        const res = await fetch(`${API}/api/meetings/${state.currentMeeting.id}/complete${query}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ durationSeconds: state.chronoSeconds })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Erro ao finalizar reunião');
-        return { ok: true, data };
-      }, 'Aguarde — finalizando reunião…');
+      state.currentMeeting.status = 'completed';
+      state.currentMeeting.actualDurationSeconds = state.chronoSeconds;
+      state.currentMeeting.completedAt = new Date().toISOString();
 
-      // Atualiza estado local com o objeto retornado
-      if (result && result.ok && result.data) {
-        state.currentMeeting = result.data;
+      if (typeof persistCurrentMeetingLocal === 'function') {
+        persistCurrentMeetingLocal();
+      } else if (typeof getLocalMeetings === 'function' && typeof saveLocalMeetings === 'function') {
+        const allMeetings = getLocalMeetings();
+        const idx = allMeetings.findIndex((m) => String(m.id) === String(state.currentMeeting.id));
+        if (idx >= 0) allMeetings[idx] = state.currentMeeting;
+        else allMeetings.unshift(state.currentMeeting);
+        saveLocalMeetings(allMeetings);
+        state.allMeetings = allMeetings;
       }
 
       // Recarrega lista para refletir cartão atualizado
@@ -131,13 +128,7 @@ async function stopChrono() {
         await reloadMeetings();
       }
 
-      // Mensagem única combinada
-      const emailSent = result && result.data && result.data.emailSent;
-      if (emailSent) {
-        showToast('Reunião finalizada e email enviado automaticamente.', 'success');
-      } else {
-        showToast('Reunião finalizada!', 'success');
-      }
+      showToast('Reunião finalizada!', 'success');
     } catch (e) {
       showToast('Erro ao finalizar reunião', 'error');
       console.error(e);
@@ -151,5 +142,4 @@ function resetChrono() {
   const timeEl = document.getElementById('chronoTime');
   if (timeEl) timeEl.textContent = '00:00:00';
 }
-
 

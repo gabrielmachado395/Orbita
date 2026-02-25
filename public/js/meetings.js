@@ -2,6 +2,27 @@
 /* ReuniX - Renderização de Reuniões                                         */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
+const LOCAL_MEETINGS_KEY = 'plataforma_local_meetings';
+
+function getLocalMeetings() {
+  try {
+    const raw = localStorage.getItem(LOCAL_MEETINGS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveLocalMeetings(meetings) {
+  localStorage.setItem(LOCAL_MEETINGS_KEY, JSON.stringify(Array.isArray(meetings) ? meetings : []));
+}
+
+function getMeetingByIdLocal(meetingId) {
+  if (!meetingId) return null;
+  return getLocalMeetings().find((m) => String(m.id) === String(meetingId)) || null;
+}
+
 function normalizeMeetingStatus(meeting) {
   // Não altere o status!
   return meeting;
@@ -42,15 +63,8 @@ function applyMeetingFilters() {
 }
 
 async function reloadMeetings() {
-  try {
-    const userKey = getCurrentUserQueryKey();
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-    const res = await fetch(`${API}/api/meetings${query}`);
-    state.allMeetings = await res.json();
-    applyMeetingFilters();
-  } catch (e) {
-    console.error(e);
-  }
+  state.allMeetings = getLocalMeetings();
+  applyMeetingFilters();
 }
 
 function renderMeetings() {
@@ -67,7 +81,7 @@ function renderMeetings() {
   empty.classList.add('hidden');
   grid.classList.remove('hidden');
 
-  grid.innerHTML = state.meetings.map(m => {
+  grid.innerHTML = state.meetings.map((m, idx) => {
     const dateObj = new Date(m.date + 'T00:00:00');
     const day = dateObj.getDate();
     const month = dateObj.toLocaleString('pt-BR', { month: 'short' }).toUpperCase().replace('.', '');
@@ -92,7 +106,7 @@ function renderMeetings() {
       : '');
 
     return `
-      <div class="meeting-card" data-id="${m.id}">
+      <div class="meeting-card" data-id="${m.id}" style="--card-index:${idx};">
         <div class="meeting-card-body">
           <div class="meeting-card-top">
             <div>
@@ -151,6 +165,10 @@ function renderMeetings() {
       if (meeting) openMeetingDetail(meeting);
     });
   });
+
+  if (typeof setupMicroMotion === 'function') {
+    setupMicroMotion();
+  }
 }
 
 function openMembersPopover(meeting) {
@@ -208,20 +226,4 @@ function openMembersPopover(meeting) {
   }
 
   overlay.classList.add('open');
-}
-
-async function reloadMeetings() {
-  try {
-    const userKey = getCurrentUserQueryKey();
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-    const res = await fetch(`${API}/api/meetings${query}`);
-    state.allMeetings = await res.json();
-    applyMeetingFilters();
-  } catch (e) {
-    console.error(e);
-  }
-}
-
-async function foo() {
-  await reloadMeetings();
 }

@@ -204,65 +204,32 @@ async function confirmStartMeeting() {
   ]));
   meeting.presentMembers = presentMembers;
 
-  const userDirectory = {};
-  presentMembers.forEach((initials) => {
-    const user = Array.isArray(state.users) ? state.users.find(u => u && u.initials === initials) : null;
-    if (user && user.name) userDirectory[initials] = user.name;
-  });
-
-  const prevStatus = meeting.status;
-  const prevStartedAt = meeting.startedAt;
-
-  // Otimista: marcar localmente enquanto chama o servidor
+  // Fluxo local: persistir início da reunião no localStorage.
   if (!meeting.startedAt) meeting.startedAt = new Date().toISOString();
   meeting.status = 'in_progress';
+  state.currentMeeting = meeting;
 
   closeStartConfirm();
   openMeetingDetail(meeting);
   startChrono();
 
   try {
-    const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-    const res = await fetch(`${API}/api/meetings/${meeting.id}/start${query}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ presentMembers, userDirectory })
-    });
-
-    if (!res.ok) {
-      // Reverter estado local se a chamada falhar
-      meeting.status = prevStatus;
-      meeting.startedAt = prevStartedAt;
-      openMeetingDetail(meeting);
-      showToast('Erro ao iniciar reunião (servidor retornou erro)', 'error');
-      const text = await res.text().catch(() => '');
-      console.error('Start meeting failed', res.status, text);
-      return;
+    if (typeof persistCurrentMeetingLocal === 'function') {
+      persistCurrentMeetingLocal();
+    } else if (typeof getLocalMeetings === 'function' && typeof saveLocalMeetings === 'function') {
+      const allMeetings = getLocalMeetings();
+      const idx = allMeetings.findIndex((m) => String(m.id) === String(meeting.id));
+      if (idx >= 0) allMeetings[idx] = meeting;
+      else allMeetings.unshift(meeting);
+      saveLocalMeetings(allMeetings);
+      state.allMeetings = allMeetings;
     }
 
-    // Use o objeto retornado pelo servidor para garantir consistência
-    const updated = await res.json().catch(() => null);
-    if (updated && updated.id) {
-      state.currentMeeting = updated;
-      if (Array.isArray(state.allMeetings)) {
-        const idx = state.allMeetings.findIndex(m => m.id === updated.id);
-        if (idx !== -1) state.allMeetings[idx] = updated;
-      }
-    }
-
-    // Atualiza listas e renderizações
     if (typeof reloadMeetings === 'function') await reloadMeetings();
-    // Reabrir detalhe com dados do servidor (garante status correto)
     if (state.currentMeeting) openMeetingDetail(state.currentMeeting);
-
     showToast('Reunião iniciada!', 'success');
   } catch (err) {
-    // Reverte em caso de falha de rede
-    meeting.status = prevStatus;
-    meeting.startedAt = prevStartedAt;
-    openMeetingDetail(meeting);
-    showToast('Erro ao iniciar reunião (falha de rede)', 'error');
+    showToast('Erro ao iniciar reunião', 'error');
     console.error(err);
   }
 }

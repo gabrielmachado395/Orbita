@@ -49,6 +49,22 @@ function normalizeUserForSync(input) {
   };
 }
 
+function normalizeApiUsuario(input) {
+  const nome = String((input && (input.nome || input.name)) || '').trim();
+  const email = String((input && input.email) || '').trim().toLowerCase();
+  const iniciais = String((input && (input.iniciais || input.initials)) || makeInitials(nome) || '').trim().toUpperCase().slice(0, 2);
+  const id = String((input && input.id) || '').trim() || ('srv_' + Date.now());
+  const role = String((input && input.role) || 'usuario').trim() || 'usuario';
+
+  return {
+    id,
+    name: nome || 'Usuário',
+    email,
+    initials: iniciais || 'US',
+    role
+  };
+}
+
 /* ── login screen logic ──────────────────────────────────────────────────── */
 let loginMode = 'login'; // 'login' | 'register'
 let loginRefs = null;
@@ -61,9 +77,16 @@ function getGoogleButtonText(mode) {
 function setLoginMode(mode) {
   if (!loginRefs) return;
   const { form, nameIn, btnEl, tabs, errorEl, googleBtnText, dividerText } = loginRefs;
+  const card = document.querySelector('.login-card');
+  const subtitleEl = document.getElementById('loginSubtitle');
+  const emailIn = document.getElementById('loginEmail');
+  const passIn = document.getElementById('loginPassword');
 
   loginMode = mode;
   tabs.forEach(t => t.classList.toggle('active', t.dataset.ltab === mode));
+  if (card) {
+    card.classList.toggle('is-register', mode === 'register');
+  }
 
   if (mode === 'login') {
     form.classList.add('login-mode');
@@ -71,12 +94,19 @@ function setLoginMode(mode) {
     nameIn.style.display = 'none';
     nameIn.required = false;
     btnEl.textContent = 'Entrar';
+    if (subtitleEl) subtitleEl.textContent = 'Acesse sua conta';
+    if (emailIn) emailIn.placeholder = 'E-mail / usuário';
+    if (passIn) passIn.placeholder = 'Senha';
   } else {
     form.classList.remove('login-mode');
     form.classList.add('register-mode');
     nameIn.style.display = '';
     nameIn.required = true;
     btnEl.textContent = 'Criar conta';
+    if (subtitleEl) subtitleEl.textContent = 'Crie sua conta';
+    if (nameIn) nameIn.placeholder = 'Nome completo';
+    if (emailIn) emailIn.placeholder = 'E-mail';
+    if (passIn) passIn.placeholder = 'Senha';
   }
 
   if (googleBtnText) googleBtnText.textContent = getGoogleButtonText(mode);
@@ -129,74 +159,83 @@ function setupLogin() {
         if (!name) { errorEl.textContent = 'Informe seu nome.'; return; }
         if (!email) { errorEl.textContent = 'Informe seu e-mail.'; return; }
         if (pass.length < 4) { errorEl.textContent = 'Senha deve ter ao menos 4 caracteres.'; return; }
+        try {
+          const createRes = await fetch(`${API}/api/usuarios-plataforma/criar`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              nome: name,
+              email,
+              senha: pass,
+              role: 'usuario',
+              iniciais: makeInitials(name)
+            })
+          });
+          const createData = await createRes.json().catch(() => ({}));
+          if (!createRes.ok) {
+            errorEl.textContent = createData.error || 'Falha ao criar conta no servidor.';
+            return;
+          }
 
-        const users = getLocalUsers();
-        if (users.find(u => u.email === email)) {
-          errorEl.textContent = 'E-mail já cadastrado.';
-          return;
+          const loginRes = await fetch(`${API}/api/usuarios-plataforma/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha: pass })
+          });
+          const loginData = await loginRes.json().catch(() => ({}));
+          if (!loginRes.ok || !loginData.usuario) {
+            errorEl.textContent = loginData.error || 'Conta criada, mas falhou ao entrar.';
+            return;
+          }
+
+          const normalized = normalizeApiUsuario(loginData.usuario);
+          const session = { id: normalized.id, name: normalized.name, email: normalized.email, initials: normalized.initials };
+          setSession(session);
+          if (typeof state === 'object' && state) state.currentUser = session;
+          sessionStorage.setItem(LOGIN_REFRESH_FLAG, '1');
+          location.reload();
+        } catch (err) {
+          errorEl.textContent = 'Erro ao conectar com o servidor.';
         }
-
-        const newUser = {
-          id: 'local_' + Date.now(),
-          name,
-          email,
-          password: pass,
-          initials: makeInitials(name),
-          role: 'usuario',
-        };
-        users.push(newUser);
-        saveLocalUsers(users);
-
-        const session = { id: newUser.id, name: newUser.name, email: newUser.email, initials: newUser.initials };
-        setSession(session);
-        if (typeof state === 'object' && state) state.currentUser = session;
-
-        syncUserToServer(newUser);
-        sessionStorage.setItem(LOGIN_REFRESH_FLAG, '1');
-        location.reload();
       } else {
         if (!email) { errorEl.textContent = 'Informe seu e-mail.'; return; }
         if (!pass) { errorEl.textContent = 'Informe sua senha.'; return; }
-
-
-        // Busca usuário no backend pelo e-mail
-        let backendUser = null;
         try {
-          const res = await fetch(`${API}/api/users?email=${encodeURIComponent(email)}`);
-          if (res.ok) {
-            const users = await res.json();
-            console.log('Debug retorno backend: ', users);
-            backendUser = Array.isArray(users) ? users.find(u => u.email === email) : users;
+          const res = await fetch(`${API}/api/usuarios-plataforma/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha: pass })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.usuario) {
+            errorEl.textContent = data.error || 'Usuário não encontrado no servidor.';
+            return;
           }
-        } catch (e) {}
 
-        if (!backendUser) {
-          errorEl.textContent = 'Usuário não encontrado no servidor.';
-          return;
+          const normalized = normalizeApiUsuario(data.usuario);
+          const session = {
+            id: normalized.id,
+            name: normalized.name,
+            email: normalized.email,
+            initials: normalized.initials
+          };
+          setSession(session);
+          if (typeof state === 'object' && state) state.currentUser = session;
+
+          sessionStorage.setItem(LOGIN_REFRESH_FLAG, '1');
+          location.reload();
+        } catch (err) {
+          errorEl.textContent = 'Erro ao conectar com o servidor.';
         }
-
-        // Aqui você pode validar a senha se desejar, ou confiar no backend
-        const session = {
-          id: backendUser.id,
-          name: backendUser.name,
-          email: backendUser.email,
-          initials: backendUser.initials
-        };
-        setSession(session);
-        if (typeof state === 'object' && state) state.currentUser = session;
-
-        syncUserToServer(backendUser);
-        sessionStorage.setItem(LOGIN_REFRESH_FLAG, '1');
-        location.reload();
-              }
-            });
+      }
+    });
 
     if (googleBtn) {
       googleBtn.addEventListener('click', () => {
         errorEl.textContent = '';
         const popup = window.open(
           `/api/auth/google/start?mode=${encodeURIComponent(loginMode)}`,
-          'orbita_google_auth',
+          'plataforma_google_auth',
           'width=520,height=640,left=200,top=80'
         );
 
@@ -281,8 +320,10 @@ function enterApp(session) {
 
   const detailView = document.getElementById('detailView');
   const listView = document.getElementById('listView');
+  const workspaceView = document.getElementById('workspaceView');
   if (detailView) detailView.classList.add('hidden');
   if (listView) listView.classList.remove('hidden');
+  if (workspaceView) workspaceView.classList.add('hidden');
 
   const openPanels = [
     'profilePanel',
@@ -348,6 +389,7 @@ function enterApp(session) {
   if (typeof renderMeetings === 'function') renderMeetings();
   if (typeof updateNotifBadge === 'function') updateNotifBadge();
   if (typeof loadData === 'function') loadData();
+  if (typeof openAppSection === 'function') openAppSection('home');
 
   if (sessionStorage.getItem(LOGIN_REFRESH_FLAG) === '1') {
     sessionStorage.removeItem(LOGIN_REFRESH_FLAG);
@@ -387,6 +429,8 @@ function logoutApp() {
   state.allMeetings = [];
   state.meetings = [];
   state.notifications = [];
+  const workspaceView = document.getElementById('workspaceView');
+  if (workspaceView) workspaceView.classList.add('hidden');
   if (typeof renderMeetings === 'function') renderMeetings();
   if (typeof updateNotifBadge === 'function') updateNotifBadge();
 

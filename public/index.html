@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="css/profile.css">
   <link rel="stylesheet" href="css/modal.css">
   <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/workspace.css">
   <link rel="stylesheet" href="css/login.css">
   <link rel="stylesheet" href="css/email.css">
   <link rel="stylesheet" href="css/loading.css">
@@ -21,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="icon" type="image/webp" href="/%C3%93rbita.ico">
+  <link rel="icon" type="image/png" href="/Plataforma.png">
 </head>
 <body>
 
@@ -30,31 +31,48 @@
   <!-- ══════════════════════════════════════════════════════════════════════ -->
   <div class="login-screen" id="loginScreen">
     <div class="login-card">
-      <span class="login-logo"></span>
-      <h1 class="login-title">Órbita</h1>
-      <p class="login-subtitle">Faça login para continuar</p>
+      <div class="login-card-bg" aria-hidden="true"></div>
 
-      <div class="login-tabs">
-        <button class="login-tab active" data-ltab="login">Entrar</button>
-        <button class="login-tab" data-ltab="register">Criar conta</button>
+      <section class="login-hero login-hero-register active">
+        <h2 class="hero-title">Novo por aqui?</h2>
+        <p class="hero-text">Crie sua conta para organizar reuniões de forma simples e rápida.</p>
+        <button class="hero-btn login-tab" data-ltab="register" type="button">CRIAR CONTA</button>
+      </section>
+
+      <section class="login-hero login-hero-login">
+        <h2 class="hero-title">Bem-vindo de volta!</h2>
+        <p class="hero-text">Entre para acompanhar suas reuniões e resultados mais recentes.</p>
+        <button class="hero-btn login-tab" data-ltab="login" type="button">ENTRAR</button>
+      </section>
+
+      <div class="login-auth">
+        <span class="login-logo"></span>
+        <h1 class="login-title">Plataforma</h1>
+        <p class="login-subtitle" id="loginSubtitle">Acesse sua conta</p>
+
+        <div class="login-tabs" aria-hidden="true">
+          <button class="login-tab active" data-ltab="login" type="button">ENTRAR</button>
+          <button class="login-tab" data-ltab="register" type="button">CRIAR CONTA</button>
+        </div>
+
+        <button class="login-google" id="loginGoogle" type="button">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+          <span id="loginGoogleText">Entrar com Google</span>
+        </button>
+
+        <div class="login-divider">
+          <span id="loginDividerText">ou</span>
+        </div>
+
+        <form class="login-form" id="loginForm">
+          <input type="text" id="loginName" placeholder="Nome completo" class="login-input" required>
+          <input type="email" id="loginEmail" placeholder="E-mail / usuário" class="login-input" required>
+          <input type="password" id="loginPassword" placeholder="Senha" class="login-input" required>
+          <p class="login-error" id="loginError"></p>
+          <a href="#" class="login-forgot" data-coming-soon="Recuperação de senha em breve">Esqueceu a senha?</a>
+          <button type="submit" class="login-btn" id="loginBtn">ENTRAR</button>
+        </form>
       </div>
-
-      <button class="login-google" id="loginGoogle" type="button">
-        <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-        <span id="loginGoogleText">Entrar com Google</span>
-      </button>
-
-      <div class="login-divider">
-        <span id="loginDividerText">ou</span>
-      </div>
-
-      <form class="login-form" id="loginForm">
-        <input type="text" id="loginName" placeholder="Nome completo" class="login-input" required>
-        <input type="email" id="loginEmail" placeholder="E-mail" class="login-input" required>
-        <input type="password" id="loginPassword" placeholder="Senha" class="login-input" required>
-        <p class="login-error" id="loginError"></p>
-        <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
-      </form>
     </div>
   </div>
 
@@ -295,18 +313,47 @@
         </div>
       </div>
 
+      <!-- ── WORKSPACE VIEW ─────────────────────────────────────────────── -->
+      <div id="workspaceView" class="workspace-view hidden">
+        <header class="workspace-header">
+          <div class="workspace-header-glow"></div>
+          <h1 id="workspaceTitle">Workspace</h1>
+          <p id="workspaceSubtitle">Selecione um item da sidebar para começar.</p>
+        </header>
+        <section class="workspace-content" id="workspaceContent"></section>
+      </div>
+
     </main>
 
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <!-- SIDEBAR                                                             -->
     <!-- ════════════════════════════════════════════════════════════════════ -->
     <aside class="sidebar" id="sidebar">
-      <div class="sidebar-top">
-        <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
+      <div class="sidebar-rail">
+        <div class="sidebar-rail-top">
+          <button class="sidebar-rail-logo" id="sidebarCompanyLogo" aria-label="Alterar logo da empresa" title="Clique para alterar • botão direito para restaurar padrão"></button>
+          <input type="file" id="sidebarCompanyLogoInput" accept="image/*" style="display:none">
+          <button class="sidebar-toggle" id="sidebarToggle" aria-label="Menu">
+            <svg class="toggle-glyph" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 2 20 6.5v11L12 22l-8-4.5v-11z"/>
+              <circle cx="12" cy="12" r="2.1"/>
+              <path d="M12 9.9V6.8"/>
+              <path d="M14.1 13.2l2.8 1.6"/>
+              <path d="M9.9 13.2 7.1 14.8"/>
+            </svg>
+          </button>
+        </div>
+
+        <div class="sidebar-rail-actions">
+          <button class="sidebar-notif-btn" id="sidebarNotifBtn" aria-label="Notificações">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <span class="notif-dot" id="sidebarNotifDot"></span>
+          </button>
+          <button class="sidebar-avatar" id="sidebarAvatar">GM</button>
+        </div>
       </div>
 
+      <div class="sidebar-panel">
       <div class="sidebar-search">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <input type="text" placeholder="Pesquisar..." id="sidebarSearch" autocomplete="off">
@@ -314,48 +361,72 @@
 
       <div class="sidebar-org" id="sidebarOrg">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-        <span class="sidebar-org-name">Equipe</span>
+        <span class="sidebar-org-name">Organização</span>
         <svg class="sidebar-org-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
 
       <nav class="sidebar-nav" id="sidebarNav">
-        <button class="nav-btn" data-nav="tarefas">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
-          <span>Tarefas</span>
+        <button class="nav-btn tree-leaf level-0" data-nav="home" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/></svg>
+          <span>Home</span>
         </button>
-        <button class="nav-btn" data-nav="projetos">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-          <span>Projetos</span>
+
+        <div class="tree-node open" data-node="planejamento">
+          <button class="nav-btn tree-toggle level-0" data-tree-toggle data-nav="planejamento" type="button" aria-expanded="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <span>Planejamento</span>
+            <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="tree-children">
+            <div class="tree-node open" data-node="projetos">
+              <button class="nav-btn tree-toggle level-1" data-tree-toggle data-nav="projetos" type="button" aria-expanded="true">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <span>Projetos</span>
+                <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+              <div class="tree-children">
+                <div class="tree-node open" data-node="tarefas">
+                  <button class="nav-btn tree-toggle level-2" data-tree-toggle data-nav="tarefas" type="button" aria-expanded="true">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    <span>Tarefas</span>
+                    <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+                  </button>
+                  <div class="tree-children">
+                    <button class="nav-btn tree-leaf level-3" data-nav="processos" type="button">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/></svg>
+                      <span>Processos</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="tree-node open" data-node="indicadores">
+          <button class="nav-btn tree-toggle level-0" data-tree-toggle data-nav="indicadores" type="button" aria-expanded="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            <span>Indicadores</span>
+            <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="tree-children">
+            <button class="nav-btn tree-leaf level-1" data-nav="setores" type="button">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01"/><path d="M15 9h.01"/></svg>
+              <span>Setores</span>
+            </button>
+          </div>
+        </div>
+
+        <button class="nav-btn tree-leaf level-0" data-nav="reunioes-workspace" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Reuniões</span>
         </button>
-        <button class="nav-btn" data-nav="indicadores">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-          <span>Indicadores</span>
-        </button>
-        <button class="nav-btn" data-nav="planejamento">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-          <span>Planejamento</span>
-        </button>
-        <button class="nav-btn" data-nav="processos">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 3 21 3 21 8"/><line x1="4" y1="20" x2="21" y2="3"/><polyline points="21 16 21 21 16 21"/><line x1="15" y1="15" x2="21" y2="21"/><line x1="4" y1="4" x2="9" y2="9"/></svg>
-          <span>Processos</span>
-        </button>
-        <button class="nav-btn active" data-nav="reunioes">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-          <span>Reuniões</span>
-        </button>
-        <button class="nav-btn has-chevron" data-nav="relatorios">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+
+        <button class="nav-btn tree-leaf level-0" data-nav="relatorios" type="button">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
           <span>Relatórios</span>
-          <svg class="nav-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </button>
       </nav>
-
-      <div class="sidebar-bottom">
-        <button class="sidebar-notif-btn" id="sidebarNotifBtn" aria-label="Notificações">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-          <span class="notif-dot" id="sidebarNotifDot"></span>
-        </button>
-        <button class="sidebar-avatar" id="sidebarAvatar">GM</button>
       </div>
     </aside>
   </div>
@@ -786,6 +857,7 @@
   <script src="js/state.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/login.js"></script>
+  <script src="js/workspace.js"></script>
   <script src="js/sidebar.js"></script>
   <script src="js/filter.js"></script>
   <script src="js/detail.js"></script>

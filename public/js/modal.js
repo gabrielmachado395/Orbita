@@ -8,13 +8,13 @@ function setupModal() {
   const btnSave = document.getElementById('btnSave');
   const toggleActive = document.getElementById('toggleActive');
 
-  btnCancel.addEventListener('click', closeModal);
+  btnCancel.addEventListener('click', () => closeModal('cancel'));
   overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) closeModal();
+    if (e.target === overlay) closeModal('cancel');
   });
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      closeModal();
+      closeModal('cancel');
       closeFilterPanel();
       const pp = document.getElementById('profilePanel');
       const po = document.getElementById('profileOverlay');
@@ -228,6 +228,9 @@ function renderMemberAvatar(initials, size = 'normal') {
 }
 
 function openModal() {
+  if (state?.workspaceUI) {
+    state.workspaceUI.returnToWorkspaceAfterMeetingModal = null;
+  }
   state.editingMeetingId = null;
   state.selectedType = 'Gerencial';
   state.recurrence = 'never';
@@ -236,8 +239,10 @@ function openModal() {
 
   document.getElementById('meetingName').value = '';
   document.getElementById('meetingDesc').value = '';
-  document.getElementById('meetingDate').value = new Date().toISOString().split('T')[0];
-  document.getElementById('meetingTime').value = '13:30';
+  const dateEl = document.getElementById('meetingDate');
+  const timeEl = document.getElementById('meetingTime');
+  if (dateEl) dateEl.value = normalizeDateInputValue(new Date().toISOString().split('T')[0]);
+  if (timeEl) timeEl.value = normalizeTimeInputValue('13:30');
   setDurationFromLabel('1h');
   document.getElementById('nameError').classList.remove('visible');
   document.getElementById('meetingName').classList.remove('error');
@@ -256,6 +261,9 @@ function openModal() {
 
 function openModalForEdit(meeting) {
   if (!meeting) return;
+  if (state?.workspaceUI) {
+    state.workspaceUI.returnToWorkspaceAfterMeetingModal = null;
+  }
   if (!canCurrentUserEditMeetingData(meeting)) {
     showToast('Somente o responsável pode editar os dados da reunião', 'info');
     return;
@@ -269,8 +277,10 @@ function openModalForEdit(meeting) {
 
   document.getElementById('meetingName').value = meeting.name || '';
   document.getElementById('meetingDesc').value = meeting.description || '';
-  document.getElementById('meetingDate').value = meeting.date || new Date().toISOString().split('T')[0];
-  document.getElementById('meetingTime').value = meeting.time || '13:30';
+  const dateEl = document.getElementById('meetingDate');
+  const timeEl = document.getElementById('meetingTime');
+  if (dateEl) dateEl.value = normalizeDateInputValue((meeting && meeting.date) || new Date().toISOString().split('T')[0]);
+  if (timeEl) timeEl.value = normalizeTimeInputValue((meeting && meeting.time) || '13:30');
   setDurationFromLabel(meeting.duration || '1h');
   document.getElementById('nameError').classList.remove('visible');
   document.getElementById('meetingName').classList.remove('error');
@@ -292,10 +302,23 @@ function openModalForEdit(meeting) {
   setTimeout(() => document.getElementById('meetingName').focus(), 100);
 }
 
-function closeModal() {
+function closeModal(reason = 'cancel') {
   document.getElementById('modalOverlay').classList.remove('open');
   document.getElementById('membersDropdown').classList.remove('open');
   document.getElementById('typeDropdown').classList.remove('open');
+
+  // Quando o modal foi aberto a partir do workspace de reuniões,
+  // cancelar deve retornar para a tela moderna.
+  const returnNav = state?.workspaceUI?.returnToWorkspaceAfterMeetingModal;
+  if (reason !== 'save' && returnNav && typeof openAppSection === 'function') {
+    state.workspaceUI.returnToWorkspaceAfterMeetingModal = null;
+    openAppSection(returnNav);
+    return;
+  }
+
+  if (state?.workspaceUI) {
+    state.workspaceUI.returnToWorkspaceAfterMeetingModal = null;
+  }
 }
 
 async function saveMeeting() {
@@ -315,11 +338,18 @@ async function saveMeeting() {
     ? [...state.selectedMembers]
     : [defaultResponsible];
 
+  const normalizedDate = normalizeDateInputValue(document.getElementById('meetingDate').value);
+  const normalizedTime = normalizeTimeInputValue(document.getElementById('meetingTime').value);
+  if (!normalizedDate || !normalizedTime) {
+    showToast('Data ou hora inválida. Verifique os campos da reunião.', 'error');
+    return;
+  }
+
   const data = {
     name,
     description: document.getElementById('meetingDesc').value.trim(),
-    date: document.getElementById('meetingDate').value,
-    time: document.getElementById('meetingTime').value,
+    date: normalizedDate,
+    time: normalizedTime,
     duration: document.getElementById('meetingDuration').value,
     type: state.selectedType,
     unit: (document.getElementById('unitTrigger')?.querySelector('span')?.textContent || '').trim().replace(/^Selecione\.\.\.$/i, ''),
@@ -351,54 +381,88 @@ async function saveMeeting() {
       return;
     }
 
-    const userKey = getCurrentUserQueryKey();
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
-    const url = isEdit
-      ? `${API}/api/meetings/${state.editingMeetingId}${query}`
-      : `${API}/api/meetings`;
-    const method = isEdit ? 'PUT' : 'POST';
+    const nowIso = new Date().toISOString();
+    const current = isEdit && typeof getMeetingByIdLocal === 'function'
+      ? getMeetingByIdLocal(state.editingMeetingId)
+      : null;
+    const meetingToPersist = {
+      id: isEdit ? state.editingMeetingId : `m_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      ...data,
+      status: (current && current.status) || 'not_started',
+      highlights: (current && current.highlights) || [],
+      pautas: (current && current.pautas) || [],
+      tasks: (current && current.tasks) || [],
+      notes: (current && current.notes) || [],
+      attachments: (current && current.attachments) || [],
+      createdAt: (current && current.createdAt) || nowIso,
+      updatedAt: nowIso,
+    };
 
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
+    const allMeetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : [];
+    const idx = allMeetings.findIndex((m) => String(m.id) === String(meetingToPersist.id));
+    if (idx >= 0) allMeetings[idx] = meetingToPersist;
+    else allMeetings.unshift(meetingToPersist);
 
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.error);
-    }
+    if (typeof saveLocalMeetings === 'function') saveLocalMeetings(allMeetings);
 
-    const updated = await res.json();
-    closeModal();
+    closeModal('save');
     await reloadMeetings();
-    if (!isEdit) await reloadNotifications();
-
-    // (fechar modal e recarregar já feito acima)
-    if (!isEdit && typeof openMeetingNotifyEmail === 'function') {
-      const result = await openMeetingNotifyEmail(updated.id);
-      // Atualiza notificações após tentativa de envio
-      await reloadNotifications();
-
-      if (result && result.ok) {
-        showToast('Reunião criada e email enviado automaticamente.', 'success');
-      } else {
-        const reason = (result && (result.data && result.data.error)) || result && result.error;
-        showToast(`Reunião criada. Falha ao enviar email: ${reason || 'Erro'}`, 'info');
-      }
-    } else {
-      showToast(isEdit ? 'Reunião atualizada!' : 'Reunião criada com sucesso!', 'success');
-    }
-
-    // Offer to notify members by email for new meetings
-    if (!isEdit && typeof openMeetingNotifyEmail === 'function') {
-      openMeetingNotifyEmail(updated.id);
-    }
-
+    showToast(isEdit ? 'Reunião atualizada!' : 'Reunião criada com sucesso!', 'success');
     state.editingMeetingId = null;
   } catch (e) {
-    showToast(e.message || 'Erro ao salvar reunião', 'error');
+    const raw = String((e && e.message) || '');
+    if (/expected pattern|failed to parse|invalid url/i.test(raw)) {
+      showToast('Erro na configuração da API. Verifique a URL base da API.', 'error');
+    } else {
+      showToast(raw || 'Erro ao salvar reunião', 'error');
+    }
   }
+}
+
+function normalizeDateInputValue(raw) {
+  const val = String(raw || '').trim();
+  if (!val) return new Date().toISOString().split('T')[0];
+
+  // already yyyy-mm-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(val)) return val;
+
+  // dd/mm/yyyy -> yyyy-mm-dd
+  const br = val.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`;
+
+  // fallback date parse
+  const d = new Date(val);
+  if (!Number.isNaN(d.getTime())) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  return '';
+}
+
+function normalizeTimeInputValue(raw) {
+  const val = String(raw || '').trim();
+  if (!val) return '13:30';
+
+  // 13:30 or 13:30:00 -> 13:30
+  const colon = val.match(/^(\d{1,2}):(\d{2})(?::\d{2})?$/);
+  if (colon) {
+    const h = Math.max(0, Math.min(23, parseInt(colon[1], 10) || 0));
+    const m = Math.max(0, Math.min(59, parseInt(colon[2], 10) || 0));
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  // 13h30
+  const hfmt = val.match(/^(\d{1,2})h(\d{2})$/i);
+  if (hfmt) {
+    const h = Math.max(0, Math.min(23, parseInt(hfmt[1], 10) || 0));
+    const m = Math.max(0, Math.min(59, parseInt(hfmt[2], 10) || 0));
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+  }
+
+  return '';
 }
 
 function setupTypeSelect() {
