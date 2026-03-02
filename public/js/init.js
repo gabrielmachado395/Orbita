@@ -25,21 +25,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadData() {
   try {
-    const userKey = getCurrentUserQueryKey();
-    const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
+    // Por enquanto, o cenário é 100% localStorage.
+    // (A integração com API será reintroduzida depois, sem quebrar persistência local.)
 
-    const [meetingsRes, usersRes, notifsRes] = await Promise.all([
-      fetch(`${API}/api/meetings${query}`),
-      fetch(`${API}/api/users`),
-      fetch(`${API}/api/notifications${query}`)
-    ]);
-    state.allMeetings = await meetingsRes.json();
-    state.users = await usersRes.json();
-    state.notifications = await notifsRes.json();
-    mergeLocalUsers();   // merge localStorage users into state.users
+    // Usuários: sempre mescla os usuários locais no diretório do app.
+    if (!Array.isArray(state.users)) state.users = [];
+    if (typeof mergeLocalUsers === 'function') mergeLocalUsers();
+
+    // Reuniões: sempre recarrega do localStorage.
+    if (typeof reloadMeetings === 'function') {
+      await reloadMeetings();
+    } else if (typeof getLocalMeetings === 'function') {
+      state.allMeetings = getLocalMeetings();
+    }
+
+    // Notificações: manter vazio enquanto API estiver fora.
+    if (!Array.isArray(state.notifications)) state.notifications = [];
   } catch (e) {
-    console.error('Erro ao carregar dados:', e);
+    console.error('Erro ao carregar dados locais:', e);
   }
+
   resetMeetingFilters();
   applyMeetingFilters();
   updateNotifBadge();

@@ -209,10 +209,6 @@ async function confirmStartMeeting() {
   meeting.status = 'in_progress';
   state.currentMeeting = meeting;
 
-  closeStartConfirm();
-  openMeetingDetail(meeting);
-  startChrono();
-
   try {
     if (typeof persistCurrentMeetingLocal === 'function') {
       persistCurrentMeetingLocal();
@@ -226,7 +222,19 @@ async function confirmStartMeeting() {
     }
 
     if (typeof reloadMeetings === 'function') await reloadMeetings();
-    if (state.currentMeeting) openMeetingDetail(state.currentMeeting);
+
+    // Fecha overlay apenas depois de persistir e recarregar.
+    closeStartConfirm();
+
+    // Reabrir detalhe com uma versão atualizada (já persistida)
+    // para evitar que openMeetingDetail faça overwrite com dados antigos.
+    const freshMeeting = (typeof fetchMeetingByIdForCurrentUser === 'function')
+      ? fetchMeetingByIdForCurrentUser(meeting.id)
+      : meeting;
+    state.currentMeeting = freshMeeting || meeting;
+
+    if (typeof openMeetingDetail === 'function') openMeetingDetail(state.currentMeeting);
+    if (typeof startChrono === 'function') startChrono();
     showToast('Reunião iniciada!', 'success');
   } catch (err) {
     showToast('Erro ao iniciar reunião', 'error');

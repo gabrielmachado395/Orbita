@@ -199,6 +199,16 @@ function openMeetingDetail(meeting) {
   state.filterResp = null;
   state.filterStatus = null;
 
+  // Se o usuário veio do workspace, garantir que o workspace fique oculto.
+  const workspaceView = document.getElementById('workspaceView');
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+  if (workspaceView && !workspaceView.classList.contains('hidden')) {
+    workspaceView.classList.add('hidden');
+    if (listView) listView.classList.add('hidden');
+    if (detailView) detailView.classList.remove('hidden');
+  }
+
   const freshMeeting = fetchMeetingByIdForCurrentUser(meeting.id);
   if (freshMeeting && state.currentMeeting && state.currentMeeting.id === freshMeeting.id) {
     state.currentMeeting = freshMeeting;
@@ -317,16 +327,36 @@ function openMeetingDetail(meeting) {
     resetChrono();
   }
 
-  switchMainView(true);
+  // Se a list view estiver visível, usa a animação padrão.
+  if (listView && !listView.classList.contains('hidden')) {
+    switchMainView(true);
+  }
 }
 
 function closeDetail() {
-  state.currentView = 'list';
+  const workspaceView = document.getElementById('workspaceView');
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+
   state.currentMeeting = null;
   stopChrono();
 
-  switchMainView(false);
+  // Se o app está no workspace (ex.: Reuniões do workspace), voltar para ele.
+  if (workspaceView && state.activeNav && state.activeNav !== 'reunioes') {
+    if (detailView) detailView.classList.add('hidden');
+    if (listView) listView.classList.add('hidden');
+    workspaceView.classList.remove('hidden');
+    state.currentView = 'workspace';
+    if (typeof renderWorkspaceSection === 'function') {
+      renderWorkspaceSection(state.activeNav);
+    }
+    if (typeof reloadMeetings === 'function') reloadMeetings();
+    return;
+  }
 
+  // Fallback: comportamento antigo (list/detail).
+  state.currentView = 'list';
+  switchMainView(false);
   reloadMeetings();
 }
 

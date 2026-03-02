@@ -1523,6 +1523,61 @@ app.post('/api/email/send', async (req, res) => {
   else res.status(500).json({ error: result.reason || 'Falha ao enviar' });
 });
 
+// Enviar ata por email (payload - suporta reuniões do localStorage)
+app.post('/api/email/send-ata', async (req, res) => {
+  const { meeting, to } = req.body || {};
+  if (!meeting) return res.status(400).json({ error: 'Informe o objeto "meeting"' });
+
+  const recipients = (Array.isArray(to) ? to : []).filter(Boolean);
+  const memberEmails = (meeting && Array.isArray(meeting.memberEmails) ? meeting.memberEmails : []).filter(Boolean);
+  const finalRecipients = Array.from(new Set([...(recipients || []), ...(memberEmails || [])]));
+
+  if (!finalRecipients.length) {
+    return res.status(400).json({ error: 'Nenhum email encontrado para os membros da reunião' });
+  }
+
+  const baseUrl = getBaseUrl(req);
+  const logoBuf = getPlataformaLogoPngBuffer();
+  const logoCid = 'plataforma-logo';
+  const meetingLink = baseUrl;
+  const html = buildMeetingCompletedHtml(meeting, {
+    baseUrl,
+    meetingLink,
+    logoUrl: logoBuf ? `cid:${logoCid}` : ''
+  });
+
+  let pdfBuffer;
+  try {
+    pdfBuffer = await buildAtaPdfBuffer(meeting);
+  } catch (e) {
+    console.error('Erro ao gerar PDF da ata (payload):', e);
+    return res.status(500).json({ error: 'Falha ao gerar PDF da ata' });
+  }
+
+  const safeName = String(meeting.name || 'Reunião').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80);
+  const pdfFilename = `Ata - ${safeName} - ${meeting.date || ''}.pdf`;
+  const dateLabel = meeting.date ? new Date(meeting.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+  const subject = `Reunião finalizada: ${meeting.name || 'Reunião'} - ${dateLabel}`;
+
+  const attachments = [
+    ...(logoBuf ? [{
+      filename: 'plataforma.png',
+      content: logoBuf,
+      cid: logoCid,
+      contentType: 'image/png'
+    }] : []),
+    {
+      filename: pdfFilename,
+      content: pdfBuffer,
+      contentType: 'application/pdf'
+    }
+  ];
+
+  const result = await sendEmail({ to: finalRecipients, subject, html, attachments });
+  if (result.success) res.json({ message: 'Ata enviada por email' });
+  else res.status(500).json({ error: result.reason || 'Falha ao enviar ata' });
+});
+
 // Enviar ata por email
 app.post('/api/email/send-ata/:id', async (req, res) => {
   const meeting = meetings.find(m => m.id === req.params.id);
@@ -1603,6 +1658,27 @@ app.get('/api/email/preview-ata-pdf/:id', async (req, res) => {
 });
 
 // Notificar membros sobre nova reunião
+app.post('/api/email/notify-meeting', async (req, res) => {
+  const { meeting, to } = req.body || {};
+  if (!meeting) return res.status(400).json({ error: 'Informe o objeto "meeting"' });
+
+  const recipients = (Array.isArray(to) ? to : []).filter(Boolean);
+  const memberEmails = (meeting && Array.isArray(meeting.memberEmails) ? meeting.memberEmails : []).filter(Boolean);
+  const finalRecipients = Array.from(new Set([...(recipients || []), ...(memberEmails || [])]));
+
+  if (!finalRecipients.length) {
+    return res.status(400).json({ error: 'Nenhum email encontrado para os membros da reunião' });
+  }
+
+  const html = buildMeetingCreatedHtml(meeting);
+  const dateLabel = meeting.date ? new Date(meeting.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+  const subject = `Nova reunião: ${meeting.name || 'Reunião'} - ${dateLabel}`;
+
+  const result = await sendEmail({ to: finalRecipients, subject, html });
+  if (result.success) res.json({ message: 'Notificação enviada' });
+  else res.status(500).json({ error: result.reason || 'Falha ao enviar notificação' });
+});
+
 app.post('/api/email/notify-meeting/:id', async (req, res) => {
   const meeting = meetings.find(m => m.id === req.params.id);
   if (!meeting) return res.status(404).json({ error: 'Reunião não encontrada' });

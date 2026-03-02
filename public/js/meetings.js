@@ -4,9 +4,45 @@
 
 const LOCAL_MEETINGS_KEY = 'plataforma_local_meetings';
 
+function getMeetingsStorageKey() {
+  const userKey = (typeof getCurrentUserQueryKey === 'function') ? String(getCurrentUserQueryKey() || '').trim() : '';
+  return `${LOCAL_MEETINGS_KEY}:${userKey || 'anon'}`;
+}
+
+function migrateMeetingsToUserKeyIfNeeded() {
+  const scopedKey = getMeetingsStorageKey();
+  const alreadyScoped = localStorage.getItem(scopedKey);
+  if (alreadyScoped) return;
+
+  // Migração suave: se existirem reuniões na chave antiga global,
+  // tenta manter apenas as relacionadas ao usuário logado.
+  const legacyRaw = localStorage.getItem(LOCAL_MEETINGS_KEY);
+  if (!legacyRaw) return;
+
+  try {
+    const legacyParsed = JSON.parse(legacyRaw);
+    if (!Array.isArray(legacyParsed) || !legacyParsed.length) return;
+
+    const initials = (state && state.currentUser && state.currentUser.initials) ? String(state.currentUser.initials) : '';
+    const filtered = initials
+      ? legacyParsed.filter((m) => {
+          const members = Array.isArray(m && m.members) ? m.members : [];
+          const responsible = String((m && m.responsible) || (members[0] || '') || '');
+          return responsible === initials || members.includes(initials);
+        })
+      : legacyParsed;
+
+    if (!filtered.length) return;
+    localStorage.setItem(scopedKey, JSON.stringify(filtered));
+  } catch (_) {
+    // se falhar, não migra
+  }
+}
+
 function getLocalMeetings() {
   try {
-    const raw = localStorage.getItem(LOCAL_MEETINGS_KEY);
+    migrateMeetingsToUserKeyIfNeeded();
+    const raw = localStorage.getItem(getMeetingsStorageKey());
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch (_) {
@@ -15,7 +51,7 @@ function getLocalMeetings() {
 }
 
 function saveLocalMeetings(meetings) {
-  localStorage.setItem(LOCAL_MEETINGS_KEY, JSON.stringify(Array.isArray(meetings) ? meetings : []));
+  localStorage.setItem(getMeetingsStorageKey(), JSON.stringify(Array.isArray(meetings) ? meetings : []));
 }
 
 function getMeetingByIdLocal(meetingId) {
@@ -34,9 +70,6 @@ function applyMeetingFilters() {
 
   if (filters.status) {
     result = result.filter(m => m.status === filters.status);
-  } else {
-    // Mostrar apenas reuniões não iniciadas na tela inicial
-    result = result.filter(m => m.status === 'not_started');
   }
 
   if (filters.type) {
@@ -65,11 +98,25 @@ function applyMeetingFilters() {
 async function reloadMeetings() {
   state.allMeetings = getLocalMeetings();
   applyMeetingFilters();
+
+  // Se o usuário estiver no workspace de reuniões, atualiza a UI moderna.
+  if (state.currentView === 'workspace' && state.activeNav === 'reunioes-workspace') {
+    if (typeof renderWorkspaceSection === 'function') {
+      renderWorkspaceSection('reunioes-workspace');
+    }
+  }
 }
 
 function renderMeetings() {
+  // O layout clássico (meetingsGrid) está sendo descontinuado.
+  // Mantém a função para compatibilidade, mas só renderiza se a list view estiver visível.
+  const listView = document.getElementById('listView');
+  if (listView && listView.classList.contains('hidden')) return;
+
   const grid = document.getElementById('meetingsGrid');
   const empty = document.getElementById('emptyState');
+
+  if (!grid || !empty) return;
 
   if (state.meetings.length === 0) {
     empty.classList.remove('hidden');

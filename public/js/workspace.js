@@ -207,7 +207,7 @@ function syncSidebarActiveState(navKey) {
 
 function openAppSection(navKey) {
   ensureWorkspaceState();
-  const key = navKey || 'home';
+  const key = (navKey === 'reunioes') ? 'reunioes-workspace' : (navKey || 'home');
   console.log('[openAppSection] called with', navKey, '-> resolved key:', key, 'state.activeNav(before):', state && state.activeNav, 'state.currentView(before):', state && state.currentView);
   state.activeNav = key;
   syncSidebarActiveState(key);
@@ -217,16 +217,6 @@ function openAppSection(navKey) {
   const workspaceView = document.getElementById('workspaceView');
   if (!listView || !detailView || !workspaceView) 
     return;
-
-  if (key === 'reunioes') {
-    workspaceView.classList.add('hidden');
-    detailView.classList.add('hidden');
-    listView.classList.remove('hidden');
-    state.currentView = 'list';
-    state.currentMeeting = null;
-    if (typeof applyMeetingFilters === 'function') applyMeetingFilters();
-    return;
-  }
 
   if (state.currentView === 'detail') {
     if (typeof stopChrono === 'function') stopChrono();
@@ -983,6 +973,8 @@ function renderMeetingsWorkspace(root) {
             ${meetings.length ? meetings.map((meeting) => {
               const selected = meeting.id === (selectedMeeting && selectedMeeting.id) ? 'ws-item-selected' : '';
               const statusLabel = meeting.status === 'completed' ? 'Finalizada' : meeting.status === 'in_progress' ? 'Em andamento' : 'Não iniciada';
+              const canStart = meeting.status !== 'completed';
+              const startLabel = meeting.status === 'in_progress' ? 'Continuar' : 'Iniciar';
               return `
                 <div class="ws-item ws-item-entity ${selected}">
                   <div class="ws-item-main" data-select-meeting="${esc(meeting.id)}">
@@ -991,7 +983,10 @@ function renderMeetingsWorkspace(root) {
                     <span class="ws-badge">${esc(meeting.date || '')} ${meeting.time ? '• ' + esc(meeting.time) : ''}</span>
                     <br><span class="ws-badge">${esc(statusLabel)}</span>
                   </div>
-                  <button type="button" class="ws-open-planning" data-open-meeting-detail="${esc(meeting.id)}">Abrir</button>
+                  <div class="ws-item-actions">
+                    ${canStart ? `<button type="button" class="ws-open-planning" data-start-meeting="${esc(meeting.id)}">${esc(startLabel)}</button>` : ''}
+                    <button type="button" class="ws-open-planning" data-open-meeting-detail="${esc(meeting.id)}">Abrir</button>
+                  </div>
                 </div>
               `;
             }).join('') : '<div class="ws-empty">Nenhuma reunião encontrada.</div>'}
@@ -1000,7 +995,6 @@ function renderMeetingsWorkspace(root) {
       </div>
 
       <article class="ws-card ws-dual-right">
-        <h3>ATA da Reunião</h3>
         ${selectedMeeting ? `
           <div class="ws-ata-doc">
             <div class="ws-ata-head">
@@ -1394,12 +1388,31 @@ function handleWorkspaceClick(e) {
     return;
   }
 
+  const startMeetingBtn = e.target.closest('[data-start-meeting]');
+  if (startMeetingBtn) {
+    const meetingId = String(startMeetingBtn.dataset.startMeeting || '');
+    const meeting = (state.allMeetings || []).find((m) => String(m.id) === meetingId);
+    if (!meeting) return;
+
+    // Somente o responsável pode iniciar.
+    const currentInitials = (state.currentUser && state.currentUser.initials) || '';
+    const responsible = (meeting && (meeting.responsible || (meeting.members && meeting.members[0]))) || '';
+    if (currentInitials && responsible && currentInitials !== responsible) {
+      showToast('Somente o responsável pode iniciar a reunião', 'info');
+      return;
+    }
+
+    if (typeof openStartConfirm === 'function') {
+      openStartConfirm(meeting);
+    }
+    return;
+  }
+
   const openMeetingDetailBtn = e.target.closest('[data-open-meeting-detail]');
   if (openMeetingDetailBtn) {
     const meetingId = String(openMeetingDetailBtn.dataset.openMeetingDetail || '');
     const meeting = (state.allMeetings || []).find((m) => String(m.id) === meetingId);
     if (meeting) {
-      openAppSection('reunioes');
       if (typeof openMeetingDetail === 'function') {
         setTimeout(() => openMeetingDetail(meeting), 0);
       }

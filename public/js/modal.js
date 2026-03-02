@@ -408,6 +408,16 @@ async function saveMeeting() {
     closeModal('save');
     await reloadMeetings();
     showToast(isEdit ? 'Reunião atualizada!' : 'Reunião criada com sucesso!', 'success');
+
+    // Email automático: notificar membros quando a reunião foi criada.
+    if (!isEdit && typeof sendMeetingCreatedEmailPayload === 'function') {
+      if (typeof getEmailsForInitials === 'function') {
+        meetingToPersist.memberEmails = getEmailsForInitials(meetingToPersist.members || []);
+      }
+      // Não bloquear o fluxo de salvar/recarregar.
+      sendMeetingCreatedEmailPayload(meetingToPersist);
+    }
+
     state.editingMeetingId = null;
   } catch (e) {
     const raw = String((e && e.message) || '');

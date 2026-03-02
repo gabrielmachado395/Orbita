@@ -2,6 +2,25 @@
 /* Plataforma - Email Module                                                     */
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
+function getEmailApiBase() {
+  // Preferir a mesma origem (quando rodando pelo servidor local),
+  // mas manter fallback para a constante API quando necessário.
+  const origin = (typeof window !== 'undefined' && window.location && window.location.origin) ? window.location.origin : '';
+  if (origin && origin !== 'null' && /^https?:/i.test(origin)) return origin;
+  return (typeof API !== 'undefined') ? API : '';
+}
+
+function getEmailsForInitials(initialsList) {
+  const list = Array.isArray(initialsList) ? initialsList : [];
+  const emails = list
+    .map((initials) => {
+      const info = (typeof getUserDisplay === 'function') ? getUserDisplay(initials) : null;
+      return info && info.email ? String(info.email).trim() : '';
+    })
+    .filter(Boolean);
+  return Array.from(new Set(emails));
+}
+
 function setupEmail() {
   // Email config panel open/close
   const configOverlay = document.getElementById('emailConfigOverlay');
@@ -67,7 +86,7 @@ function closeEmailConfig() {
 
 async function loadEmailConfig() {
   try {
-    const res = await fetch(`${API}/api/email/config`);
+    const res = await fetch(`${getEmailApiBase()}/api/email/config`);
     if (!res.ok) return;
     const cfg = await res.json();
     document.getElementById('emailEnabled').checked = !!cfg.enabled;
@@ -94,7 +113,7 @@ async function saveEmailConfig() {
       from: document.getElementById('emailFrom').value.trim()
     };
 
-    const res = await fetch(`${API}/api/email/config`, {
+    const res = await fetch(`${getEmailApiBase()}/api/email/config`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
@@ -119,7 +138,7 @@ async function testEmailConfig() {
   await saveEmailConfig();
 
   try {
-    const res = await fetch(`${API}/api/email/test`, {
+    const res = await fetch(`${getEmailApiBase()}/api/email/test`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ to: userEmail })
@@ -200,7 +219,7 @@ function openAtaEmailSend() {
 
   openEmailSend('Enviar ata por email', async (emails) => {
     try {
-      const res = await fetch(`${API}/api/email/send-ata/${state.currentMeeting.id}`, {
+      const res = await fetch(`${getEmailApiBase()}/api/email/send-ata/${state.currentMeeting.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ to: emails })
@@ -224,7 +243,7 @@ async function openAtaEmailPreview() {
   }
 
   try {
-    const res = await fetch(`${API}/api/email/preview-ata/${state.currentMeeting.id}`);
+    const res = await fetch(`${getEmailApiBase()}/api/email/preview-ata/${state.currentMeeting.id}`);
     const data = await res.json();
     if (!res.ok) {
       throw new Error(data.error || 'Erro ao carregar pré-visualização');
@@ -236,7 +255,7 @@ async function openAtaEmailPreview() {
       return;
     }
 
-    const pdfUrl = `${API}/api/email/preview-ata-pdf/${state.currentMeeting.id}`;
+    const pdfUrl = `${getEmailApiBase()}/api/email/preview-ata-pdf/${state.currentMeeting.id}`;
 
     const html = `<!DOCTYPE html>
       <html lang="pt-BR">
@@ -271,7 +290,7 @@ function openMeetingNotifyEmail(meetingId) {
   const userKey = (typeof getCurrentUserQueryKey === 'function') ? getCurrentUserQueryKey() : '';
   const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
 
-  fetch(`${API}/api/email/notify-meeting/${meetingId}${query}`, {
+  fetch(`${getEmailApiBase()}/api/email/notify-meeting/${meetingId}${query}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({})
@@ -287,4 +306,56 @@ function openMeetingNotifyEmail(meetingId) {
     .catch(() => {
       showToast('Erro ao enviar notificação automática', 'error');
     });
+}
+
+/* ── Automatic emails (localStorage meetings via payload) ───────────────── */
+
+async function sendMeetingCreatedEmailPayload(meeting) {
+  if (!meeting) return;
+  const memberInitials = Array.isArray(meeting.members) ? meeting.members : [];
+  const memberEmails = Array.isArray(meeting.memberEmails) && meeting.memberEmails.length
+    ? meeting.memberEmails
+    : getEmailsForInitials(memberInitials);
+
+  try {
+    const res = await fetch(`${getEmailApiBase()}/api/email/notify-meeting`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meeting: { ...meeting, memberEmails }, to: memberEmails })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showToast('Email de reunião criada enviado aos membros.', 'success');
+      return;
+    }
+    showToast(data.error || 'Erro ao enviar email de reunião criada', 'error');
+  } catch (_) {
+    showToast('Erro ao enviar email de reunião criada', 'error');
+  }
+}
+
+async function sendMeetingCompletedEmailPayload(meeting) {
+  if (!meeting) return;
+  const participants = Array.isArray(meeting.presentMembers) && meeting.presentMembers.length
+    ? meeting.presentMembers
+    : (Array.isArray(meeting.members) ? meeting.members : []);
+  const participantEmails = Array.isArray(meeting.memberEmails) && meeting.memberEmails.length
+    ? meeting.memberEmails
+    : getEmailsForInitials(participants);
+
+  try {
+    const res = await fetch(`${getEmailApiBase()}/api/email/send-ata`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meeting: { ...meeting, memberEmails: participantEmails }, to: participantEmails })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) {
+      showToast('Email de reunião finalizada enviado aos membros.', 'success');
+      return;
+    }
+    showToast(data.error || 'Erro ao enviar email de reunião finalizada', 'error');
+  } catch (_) {
+    showToast('Erro ao enviar email de reunião finalizada', 'error');
+  }
 }

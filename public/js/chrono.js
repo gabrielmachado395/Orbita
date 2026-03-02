@@ -116,6 +116,18 @@ async function stopChrono() {
         state.allMeetings = allMeetings;
       }
 
+      // Email automático: enviar ata/participantes ao finalizar.
+      if (typeof sendMeetingCompletedEmailPayload === 'function') {
+        if (typeof getEmailsForInitials === 'function') {
+          const participants = (state.currentMeeting.presentMembers && state.currentMeeting.presentMembers.length)
+            ? state.currentMeeting.presentMembers
+            : (state.currentMeeting.members || []);
+          state.currentMeeting.memberEmails = getEmailsForInitials(participants);
+        }
+        // Não travar o fluxo de finalização caso o email falhe.
+        sendMeetingCompletedEmailPayload(state.currentMeeting);
+      }
+
       // Recarrega lista para refletir cartão atualizado
       await reloadMeetings();
 
