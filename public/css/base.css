@@ -46,7 +46,7 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background:
     radial-gradient(circle at 14% 20%, rgba(33, 135, 171, 0.22), transparent 34%),
-    radial-gradient(circle at 84% 80%, rgba(90, 170, 130, 0.18), transparent 38%),
+    radial-gradient(circle at 84% 80%, rgba(90, 138, 170, 0.377), transparent 38%),
     #0a0f18;
   background-attachment: fixed;
   min-height: 100vh;

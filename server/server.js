@@ -889,6 +889,20 @@ app.post('/api/meetings', (req, res) => {
     createdAt: new Date().toISOString()
   });
 
+  // Dispara email de notificação em background (não bloqueia a resposta)
+  (async () => {
+    try {
+      const recipients = getParticipantEmails(newMeeting);
+      if (!recipients.length) return;
+      const dateLabel = newMeeting.date ? new Date(newMeeting.date + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+      const subject = `Nova reunião: ${newMeeting.name || 'Reunião'} - ${dateLabel}`;
+      const html = buildMeetingCreatedHtml(newMeeting);
+      const result = await sendEmail({ to: recipients, subject, html });
+      if (!result.success) console.warn('Falha ao enviar email de criação de reunião:', result.reason);
+    } catch (err) {
+      console.error('Erro ao enviar email de criação (background):', err);
+    }
+  })();
   res.status(201).json(newMeeting);
 });
 

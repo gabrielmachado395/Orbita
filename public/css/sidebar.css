@@ -143,6 +143,7 @@
   border-radius: 12px;
   background: rgba(12, 22, 35, 0.72);
   backdrop-filter: blur(8px);
+  margin-top: 12px;
 }
 
 .sidebar-search input {

@@ -16,6 +16,8 @@ function setupWorkspace() {
   view.addEventListener('dragover', handleWorkspaceDragOver);
   view.addEventListener('drop', handleWorkspaceDrop);
   view.addEventListener('dragend', handleWorkspaceDragEnd);
+
+  
 }
 
 function ensureWorkspaceState() {
@@ -33,6 +35,7 @@ function loadWorkspaceData() {
     const parsed = JSON.parse(raw);
     const normalized = emptyWorkspaceData();
 
+    normalized.indicadores = normalizeIndicadores(parsed.indicadores || []);
     normalized.setores = Array.isArray(parsed.setores) ? parsed.setores : [];
     normalized.reunioesTarefas = Array.isArray(parsed.reunioesTarefas) ? parsed.reunioesTarefas : [];
     normalized.reunioesProcessos = Array.isArray(parsed.reunioesProcessos) ? parsed.reunioesProcessos : [];
@@ -110,6 +113,7 @@ function emptyWorkspaceData() {
     projetos: [],
     tarefas: [],
     processos: [],
+    indicadores: [],
     setores: [],
     reunioesTarefas: [],
     reunioesProcessos: [],
@@ -159,6 +163,16 @@ function normalizeProcessos(items) {
   }));
 }
 
+function normalizeIndicadores(items) {
+  if (!Array.isArray(items)) return [];
+  return items.map((i) => ({
+    id: String((i && i.id) || mkId('ind')),
+    nome: String((i && i.nome) || 'Indicador'),
+    setorId: i && i.setorId ? String(i.setorId) : null,
+    meta: String((i && i.meta) || ''),
+  }));
+}
+
 function saveWorkspaceData() {
   if (!state.workspaceData) return;
   localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(state.workspaceData));
@@ -194,13 +208,15 @@ function syncSidebarActiveState(navKey) {
 function openAppSection(navKey) {
   ensureWorkspaceState();
   const key = navKey || 'home';
+  console.log('[openAppSection] called with', navKey, '-> resolved key:', key, 'state.activeNav(before):', state && state.activeNav, 'state.currentView(before):', state && state.currentView);
   state.activeNav = key;
   syncSidebarActiveState(key);
 
   const listView = document.getElementById('listView');
   const detailView = document.getElementById('detailView');
   const workspaceView = document.getElementById('workspaceView');
-  if (!listView || !detailView || !workspaceView) return;
+  if (!listView || !detailView || !workspaceView) 
+    return;
 
   if (key === 'reunioes') {
     workspaceView.classList.add('hidden');
@@ -253,7 +269,8 @@ function renderWorkspaceSection(navKey) {
   if (navKey === 'projetos') return renderProjectsWorkspace(contentEl);
   if (navKey === 'tarefas') return renderTasksWorkspace(contentEl);
   if (navKey === 'processos') return renderProcessesWorkspace(contentEl);
-  if (['indicadores', 'setores'].includes(navKey)) return renderSetoresWorkspace(contentEl);
+  if (navKey === 'indicadores') return renderIndicadoresWorkspace(contentEl);
+  if (navKey === 'setores') return renderSetoresWorkspace(contentEl);
   if (navKey === 'reunioes-workspace') return renderMeetingsWorkspace(contentEl);
   if (navKey === 'tarefas-reunioes') return renderMeetingTasksWorkspace(contentEl);
   if (['processos-reunioes', 'relatorios'].includes(navKey)) return renderMeetingOpsWorkspace(navKey, contentEl);
@@ -359,8 +376,20 @@ function getProcessesForTask(taskId) {
 }
 
 function getAssignableUsers() {
+  const raw = state.users;
+  let list = [];
+
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (raw && typeof raw === 'object') {
+    // aceita objeto mapeado por id/iniciais
+    list = Object.values(raw);
+  } else {
+    list = [];
+  }
+
   const map = new Map();
-  (state.users || []).forEach((u) => {
+  (list || []).forEach((u) => {
     if (!u || !u.initials) return;
     map.set(String(u.initials), {
       id: String(u.initials),
@@ -368,6 +397,7 @@ function getAssignableUsers() {
       email: String(u.email || ''),
     });
   });
+
   if (state.currentUser && state.currentUser.initials && !map.has(String(state.currentUser.initials))) {
     map.set(String(state.currentUser.initials), {
       id: String(state.currentUser.initials),
@@ -375,6 +405,7 @@ function getAssignableUsers() {
       email: String(state.currentUser.email || ''),
     });
   }
+
   return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
 }
 
@@ -870,6 +901,42 @@ function renderProcessLinkItem(process, tasks) {
   `;
 }
 
+function renderIndicadoresWorkspace(root) {
+  const indicadores = state.workspaceData.indicadores || [];
+  const setores = state.workspaceData.setores || [];
+  const setorById = new Map(setores.map((s) => [String(s.id), s]));
+
+  const options = ['<option value="">Sem setor</option>']
+    .concat(setores.map((s) => `<option value="${esc(s.id)}">${esc(s.nome)}</option>`))
+    .join('');
+
+  root.innerHTML = `
+    <article class="ws-card ws-focus">
+      <h3>Novo Indicador</h3>
+      <form class="ws-form" id="wsIndicatorForm">
+        <input type="text" name="nome" placeholder="Nome do indicador" required>
+        <select name="setorId">${options}</select>
+        <input type="text" name="meta" placeholder="Meta (opcional)">
+        <button type="submit">Salvar Indicador</button>
+      </form>
+    </article>
+    <article class="ws-card">
+      <h3>Indicadores cadastrados</h3>
+      <div class="ws-list">
+        ${indicadores.length
+          ? indicadores.map((ind) => {
+              const setor = ind.setorId ? setorById.get(String(ind.setorId)) : null;
+              const setorLabel = setor ? `Setor: ${esc(setor.nome)}` : 'Sem setor';
+              const metaLabel = ind.meta ? ` | Meta: ${esc(ind.meta)}` : '';
+              return `<div class="ws-item"><strong>${esc(ind.nome)}</strong><br><small>${setorLabel}${metaLabel}</small></div>`;
+            }).join('')
+          : '<div class="ws-empty">Nenhum indicador cadastrado.</div>'}
+      </div>
+      ${!setores.length ? '<p><small>Dica: cadastre setores em Indicadores → Setores para organizar melhor.</small></p>' : ''}
+    </article>
+  `;
+}
+
 function renderSetoresWorkspace(root) {
   const setores = state.workspaceData.setores || [];
   root.innerHTML = `
@@ -1256,6 +1323,19 @@ function handleWorkspaceSubmit(e) {
     saveWorkspaceData();
     renderWorkspaceSection(state.activeNav || 'setores');
     showToast('Setor salvo.', 'success');
+    return;
+  }
+
+  if (form.id === 'wsIndicatorForm') {
+    const nome = String(form.nome.value || '').trim();
+    const setorId = String(form.setorId.value || '') || null;
+    const meta = String(form.meta.value || '').trim();
+    if (!nome) return;
+    state.workspaceData.indicadores = Array.isArray(state.workspaceData.indicadores) ? state.workspaceData.indicadores : [];
+    state.workspaceData.indicadores.push({ id: mkId('ind'), nome, setorId, meta });
+    saveWorkspaceData();
+    renderWorkspaceSection('indicadores');
+    showToast('Indicador salvo.', 'success');
     return;
   }
 

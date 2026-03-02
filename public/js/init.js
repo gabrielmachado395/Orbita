@@ -4,9 +4,9 @@
 
 document.addEventListener('DOMContentLoaded', () => {
   setupLogin();            // login / session check (shows app if already logged)
-  setupWorkspace();
   setupSidebar();
   setupHeader();
+  setupWorkspace();
   setupModal();
   setupNotifications();
   setupFilterPanel();
@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', () => {
   setupGoogleLogin();
   setupFilterChips();
   setupEmail();
-  setupMicroMotion();
 
   // Logout button
   const logoutBtn = document.getElementById('btnLogout');
@@ -26,15 +25,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
 async function loadData() {
   try {
-    state.allMeetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : [];
-
     const userKey = getCurrentUserQueryKey();
     const query = userKey ? `?user=${encodeURIComponent(userKey)}` : '';
 
-    const [usersRes, notifsRes] = await Promise.all([
+    const [meetingsRes, usersRes, notifsRes] = await Promise.all([
+      fetch(`${API}/api/meetings${query}`),
       fetch(`${API}/api/users`),
       fetch(`${API}/api/notifications${query}`)
     ]);
+    state.allMeetings = await meetingsRes.json();
     state.users = await usersRes.json();
     state.notifications = await notifsRes.json();
     mergeLocalUsers();   // merge localStorage users into state.users
@@ -184,40 +183,5 @@ function setupFilterChips() {
     } else if (typeof openFilterPanel === 'function') {
       openFilterPanel();
     }
-  });
-}
-
-function setupMicroMotion() {
-  const selector = [
-    '.btn-new-meeting',
-    '.btn-layout',
-    '.btn-start',
-    '.sidebar-toggle',
-    '.sidebar-notif-btn',
-    '.btn-save',
-    '.btn-upload'
-  ].join(',');
-
-  const buttons = document.querySelectorAll(selector);
-  if (!buttons.length) return;
-
-  buttons.forEach((btn) => {
-    if (btn.dataset.magneticBound === '1') return;
-    btn.dataset.magneticBound = '1';
-    btn.classList.add('magnetic-btn');
-
-    btn.addEventListener('pointermove', (event) => {
-      const rect = btn.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const relX = (event.clientX - rect.left) / rect.width - 0.5;
-      const relY = (event.clientY - rect.top) / rect.height - 0.5;
-      const offsetX = Math.max(-6, Math.min(6, relX * 12));
-      const offsetY = Math.max(-4, Math.min(4, relY * 8));
-      btn.style.transform = `translate(${offsetX}px, ${offsetY}px)`;
-    });
-
-    btn.addEventListener('pointerleave', () => {
-      btn.style.transform = '';
-    });
   });
 }

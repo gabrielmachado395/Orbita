@@ -6,8 +6,8 @@ function setupHeader() {
   const btnNew = document.getElementById('btnNewMeeting');
   const btnFilter = document.getElementById('btnFilter');
 
-  btnNew.addEventListener('click', openModal);
-  btnFilter.addEventListener('click', openFilterPanel);
+  if (btnNew) btnNew.addEventListener('click', openModal);
+  if (btnFilter) btnFilter.addEventListener('click', openFilterPanel);
 }
 
 function setupFilterPanel() {
@@ -66,16 +66,20 @@ function closeFilterPanel() {
 function populateFilterUsers() {
   const fpResp = document.getElementById('fpResponsible');
   const fpMember = document.getElementById('fpMember');
+  if (!fpResp || !fpMember) return;
 
-  state.users.forEach(u => {
+  const raw = state.users;
+  const users = Array.isArray(raw) ? raw : (raw && typeof raw === 'object') ? Object.values(raw) : [];
+
+  users.forEach(u => {
     const opt1 = document.createElement('option');
-    opt1.value = u.initials;
-    opt1.textContent = u.name;
+    opt1.value = u.initials || (u.id || '');
+    opt1.textContent = u.name || u.initials || (u.id || '');
     fpResp.appendChild(opt1);
 
     const opt2 = document.createElement('option');
-    opt2.value = u.initials;
-    opt2.textContent = u.name;
+    opt2.value = u.initials || (u.id || '');
+    opt2.textContent = u.name || u.initials || (u.id || '');
     fpMember.appendChild(opt2);
   });
 }
