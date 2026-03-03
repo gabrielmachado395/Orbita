@@ -388,6 +388,7 @@ async function saveMeeting() {
     const meetingToPersist = {
       id: isEdit ? state.editingMeetingId : `m_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       ...data,
+      seriesId: (current && current.seriesId) || (isEdit ? state.editingMeetingId : null),
       status: (current && current.status) || 'not_started',
       highlights: (current && current.highlights) || [],
       pautas: (current && current.pautas) || [],
@@ -397,6 +398,8 @@ async function saveMeeting() {
       createdAt: (current && current.createdAt) || nowIso,
       updatedAt: nowIso,
     };
+
+    if (!meetingToPersist.seriesId) meetingToPersist.seriesId = meetingToPersist.id;
 
     const allMeetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : [];
     const idx = allMeetings.findIndex((m) => String(m.id) === String(meetingToPersist.id));

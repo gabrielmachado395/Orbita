@@ -703,9 +703,16 @@ function getAtaMeetingsForSelectedPeriod() {
   const selectedMonth = Number(monthSelect ? monthSelect.value : state.ataMonth);
   const selectedYear = Number(yearInput ? yearInput.value : state.ataYear);
 
+  const currentSeriesId = state.currentMeeting.seriesId || '';
+  const currentName = state.currentMeeting.name;
+
   const sameSeries = (state.allMeetings || []).filter(m => {
     if (!m || !m.date) return false;
-    if (m.name !== state.currentMeeting.name) return false;
+    if (currentSeriesId) {
+      if ((m.seriesId || '') !== currentSeriesId) return false;
+    } else {
+      if (m.name !== currentName) return false;
+    }
     const d = new Date(m.date + 'T00:00:00');
     return d.getMonth() === selectedMonth && d.getFullYear() === selectedYear;
   });

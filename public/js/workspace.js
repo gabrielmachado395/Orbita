@@ -951,7 +951,7 @@ function renderSetoresWorkspace(root) {
 }
 
 function renderMeetingsWorkspace(root) {
-  const meetings = Array.isArray(state.allMeetings) ? state.allMeetings : [];
+  const meetings = (Array.isArray(state.allMeetings) ? state.allMeetings : []).filter((m) => !(m && m.archived));
   const selectedMeeting =
     meetings.find((m) => m.id === state.workspaceUI.selectedMeetingId) ||
     meetings[0] ||

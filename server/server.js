@@ -277,6 +277,9 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
   const dateLabel = meeting.date ? new Date(meeting.date + 'T00:00:00').toLocaleDateString('pt-BR') : '-';
   const timeLabel = meeting.time || '-';
 
+  const nextDateRaw = meeting.nextMeetingDate || computeNextMeetingDate(meeting.recurrence, meeting.date);
+  const nextDateLabel = nextDateRaw ? new Date(nextDateRaw + 'T00:00:00').toLocaleDateString('pt-BR') : '';
+
   const durationSecs = meeting.actualDurationSeconds;
   let durationLabel = meeting.duration || '-';
   if (Number.isFinite(Number(durationSecs))) {
@@ -311,6 +314,13 @@ function buildMeetingCompletedHtml(meeting, options = {}) {
               Duração: <span style="color:${textMain};font-weight:600;">${durationLabel}</span>.
               A ata desta reunião está em anexo em PDF.
             </div>
+
+            ${nextDateLabel ? `
+              <div style="font-size:13px;color:${textMuted};margin:0 auto 10px;max-width:620px;">
+                Data da próxima reunião: <span style="color:${textMain};font-weight:700;">${nextDateLabel}</span>
+              </div>
+            ` : ''}
+
             <div style="margin-top:18px;">
               <a href="${meetingLink}" style="display:inline-block;background:${primary};color:#ffffff;text-decoration:none;padding:12px 26px;border-radius:999px;font-weight:700;font-size:14px;">
                 Ver Reunião
