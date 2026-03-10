@@ -80,6 +80,14 @@ input, select, textarea { font-family: inherit; font-size: inherit; }
 }
 .btn-icon-sm:hover { color: var(--text); }
 
+#btnEditName {
+  color: #d5a14d;
+}
+
+#btnEditName:hover {
+  color: #e6bc7a;
+}
+
 .magnetic-btn {
   transition: transform .18s ease, box-shadow .2s ease, filter .2s ease;
   will-change: transform;

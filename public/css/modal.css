@@ -632,16 +632,18 @@
   width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--border);
-  color: var(--text-muted);
+  border: 1px solid rgba(240, 105, 116, 0.45);
+  color: #f06974;
+  background: rgba(240, 105, 116, 0.14);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: var(--transition);
 }
 .start-remove-btn:hover {
-  color: var(--destructive);
-  border-color: var(--destructive);
+  color: #ff8a95;
+  border-color: #f06974;
+  background: rgba(240, 105, 116, 0.22);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */

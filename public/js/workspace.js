@@ -205,9 +205,18 @@ function syncSidebarActiveState(navKey) {
   }
 }
 
+function resolveWorkspaceNavKey(navKey) {
+  const raw = String(navKey || '').trim().toLowerCase();
+  if (!raw) return 'home';
+  if (raw === 'reunioes') return 'reunioes-workspace';
+  if (raw === 'configurações' || raw === 'configuracao' || raw === 'configuração') return 'configuracoes';
+  if (raw === 'indicadores' || raw === 'setores') return 'configuracoes';
+  return raw;
+}
+
 function openAppSection(navKey) {
   ensureWorkspaceState();
-  const key = (navKey === 'reunioes') ? 'reunioes-workspace' : (navKey || 'home');
+  const key = resolveWorkspaceNavKey(navKey);
   console.log('[openAppSection] called with', navKey, '-> resolved key:', key, 'state.activeNav(before):', state && state.activeNav, 'state.currentView(before):', state && state.currentView);
   state.activeNav = key;
   syncSidebarActiveState(key);
@@ -236,36 +245,72 @@ function renderWorkspaceSection(navKey) {
   const contentEl = document.getElementById('workspaceContent');
   if (!titleEl || !subEl || !contentEl) return;
 
+  const key = resolveWorkspaceNavKey(navKey);
   const meta = {
     home: { title: 'Home', subtitle: 'Visão geral da Organização e atalhos da Plataforma.' },
     planejamento: { title: 'Construtor Estratégico', subtitle: 'Árvore raiz do plano anual com projetos arrastáveis.' },
     projetos: { title: 'Projetos', subtitle: 'Crie projetos com ou sem plano estratégico e vincule quando quiser.' },
     tarefas: { title: 'Tarefas', subtitle: 'Crie tarefas com ou sem projeto, mantendo flexibilidade.' },
     processos: { title: 'Processos', subtitle: 'Crie processos com ou sem tarefa e vincule depois.' },
-    indicadores: { title: 'Indicadores', subtitle: 'Acompanhe indicadores e organize por setores.' },
-    setores: { title: 'Setores', subtitle: 'Cadastro de setores para estrutura dos indicadores.' },
+    configuracoes: { title: 'Configurações', subtitle: 'Gerencie setores e cadastros estruturais da plataforma.' },
     'reunioes-workspace': { title: 'Reuniões', subtitle: 'Abra uma reunião e crie pautas com tarefas sem necessidade de projeto.' },
     'tarefas-reunioes': { title: 'Tarefas de Reuniões', subtitle: 'Ações geradas durante as reuniões.' },
     'processos-reunioes': { title: 'Processos de Reuniões', subtitle: 'Fluxos relacionados às pautas e decisões.' },
     relatorios: { title: 'Relatórios', subtitle: 'Modelos e registros de relatórios da plataforma.' },
   };
 
-  const current = meta[navKey] || { title: 'Workspace', subtitle: 'Seção em preparação.' };
+  const current = meta[key] || { title: 'Workspace', subtitle: 'Seção em preparação.' };
   titleEl.textContent = current.title;
   subEl.textContent = current.subtitle;
 
-  if (navKey === 'home') return renderHomeWorkspace(contentEl);
-  if (navKey === 'planejamento') return renderPlanningBuilder(contentEl);
-  if (navKey === 'projetos') return renderProjectsWorkspace(contentEl);
-  if (navKey === 'tarefas') return renderTasksWorkspace(contentEl);
-  if (navKey === 'processos') return renderProcessesWorkspace(contentEl);
-  if (navKey === 'indicadores') return renderIndicadoresWorkspace(contentEl);
-  if (navKey === 'setores') return renderSetoresWorkspace(contentEl);
-  if (navKey === 'reunioes-workspace') return renderMeetingsWorkspace(contentEl);
-  if (navKey === 'tarefas-reunioes') return renderMeetingTasksWorkspace(contentEl);
-  if (['processos-reunioes', 'relatorios'].includes(navKey)) return renderMeetingOpsWorkspace(navKey, contentEl);
+  if (key === 'home') return renderHomeWorkspace(contentEl);
+  if (key === 'planejamento') return renderPlanningBuilder(contentEl);
+  if (key === 'projetos') return renderProjectsWorkspace(contentEl);
+  if (key === 'tarefas') return renderTasksWorkspace(contentEl);
+  if (key === 'processos') return renderProcessesWorkspace(contentEl);
+  if (key === 'configuracoes') return renderConfiguracoesWorkspace(contentEl);
+  if (key === 'reunioes-workspace') return renderMeetingsWorkspace(contentEl);
+  if (key === 'tarefas-reunioes') return renderMeetingTasksWorkspace(contentEl);
+  if (['processos-reunioes', 'relatorios'].includes(key)) return renderMeetingOpsWorkspace(key, contentEl);
 
   contentEl.innerHTML = '<div class="ws-card"><h3>Em construção</h3><p>Esta seção será habilitada em seguida.</p></div>';
+}
+
+function renderConfiguracoesWorkspace(root) {
+  const setores = state.workspaceData.setores || [];
+  root.innerHTML = `
+    <section class="ws-dual-layout">
+      <div class="ws-dual-left">
+        <article class="ws-card ws-focus">
+          <h3>Setores</h3>
+          <form class="ws-form" id="wsSectorForm">
+            <input type="text" name="nome" placeholder="Nome do setor" required>
+            <input type="text" name="responsavel" placeholder="Responsável" required>
+            <input type="text" name="meta" placeholder="Meta principal do setor">
+            <button type="submit">Salvar Setor</button>
+          </form>
+        </article>
+        <article class="ws-card">
+          <h3>Setores cadastrados</h3>
+          <div class="ws-list">
+            ${setores.length
+              ? setores.map((s) => `
+                <div class="ws-item ws-item-entity">
+                  <div>
+                    <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
+                  </div>
+                  <div class="ws-item-mini-actions">
+                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-sector="${esc(s.id)}">Alterar</button>
+                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-sector="${esc(s.id)}">Excluir</button>
+                  </div>
+                </div>
+              `).join('')
+              : '<div class="ws-empty">Nenhum setor cadastrado.</div>'}
+          </div>
+        </article>
+      </div>
+    </section>
+  `;
 }
 
 function renderHomeWorkspace(root) {
@@ -405,11 +450,210 @@ function userNameById(userId) {
   return u ? u.name : userId;
 }
 
+function setTreeAddState(kind, parentId) {
+  if (!state.workspaceUI) state.workspaceUI = {};
+  state.workspaceUI.treeAddKind = String(kind || '');
+  state.workspaceUI.treeAddParentId = String(parentId || '');
+}
+
+function clearTreeAddState() {
+  if (!state.workspaceUI) return;
+  state.workspaceUI.treeAddKind = '';
+  state.workspaceUI.treeAddParentId = '';
+}
+
+function renderPlanningTreeAddModal(plan) {
+  const kind = String((state.workspaceUI && state.workspaceUI.treeAddKind) || '');
+  const parentId = String((state.workspaceUI && state.workspaceUI.treeAddParentId) || '');
+  const users = getAssignableUsers();
+  const userOptions = users.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}${u.email ? ` • ${esc(u.email)}` : ''}</option>`).join('');
+
+  if (!kind || !parentId) {
+    return `
+      <div class="modal-overlay" id="wsTreeAddModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Novo item</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="tree-add" aria-label="Fechar">×</button>
+            </div>
+            <div class="ws-empty">Selecione um botão + na árvore estratégica.</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (kind === 'project') {
+    const parentLabel = plan ? `${plan.ano} • ${plan.nome}` : 'Plano raiz';
+    return `
+      <div class="modal-overlay" id="wsTreeAddModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVO PROJETO</span>
+            <div class="recurrence-options"><button type="button" class="rec-btn active">RAIZ</button></div>
+          </div>
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Novo Projeto no Plano</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="tree-add" aria-label="Fechar">×</button>
+            </div>
+            <form class="ws-form ws-modal-form" id="wsTreeAddForm" data-tree-kind="project" data-tree-parent="${esc(parentId)}">
+              <label class="ws-label">Raiz estratégica</label>
+              <input type="text" value="${esc(parentLabel)}" disabled>
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome do projeto" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <label class="ws-label">Responsável(is) (máx. 2)</label>
+              <select name="managerIds" multiple size="4">${userOptions}</select>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
+                <button type="submit" class="btn-save">Criar Projeto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (kind === 'task') {
+    const project = (state.workspaceData.projetos || []).find((p) => String(p.id) === parentId);
+    return `
+      <div class="modal-overlay" id="wsTreeAddModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVA TAREFA</span>
+            <div class="recurrence-options"><button type="button" class="rec-btn active">PROJETO</button></div>
+          </div>
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Nova Tarefa no Projeto</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="tree-add" aria-label="Fechar">×</button>
+            </div>
+            <form class="ws-form ws-modal-form" id="wsTreeAddForm" data-tree-kind="task" data-tree-parent="${esc(parentId)}">
+              <label class="ws-label">Projeto</label>
+              <input type="text" value="${esc((project && project.nome) || parentId)}" disabled>
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome da tarefa" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <label class="ws-label">Responsável</label>
+              <select name="assigneeId">
+                <option value="">Sem usuário</option>
+                ${userOptions}
+              </select>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
+                <button type="submit" class="btn-save">Criar Tarefa</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  const task = (state.workspaceData.tarefas || []).find((t) => String(t.id) === parentId);
+  return `
+    <div class="modal-overlay" id="wsTreeAddModalOverlay">
+      <div class="modal-create ws-modal-create ws-modal-like-meeting">
+        <div class="modal-recurrence ws-modal-recurrence">
+          <span class="recurrence-label">NOVO PROCESSO</span>
+          <div class="recurrence-options"><button type="button" class="rec-btn active">TAREFA</button></div>
+        </div>
+        <div class="modal-body ws-modal-body">
+          <div class="ws-modal-header">
+            <h3>Novo Processo na Tarefa</h3>
+            <button type="button" class="ws-modal-close" data-close-workspace-modal="tree-add" aria-label="Fechar">×</button>
+          </div>
+          <form class="ws-form ws-modal-form" id="wsTreeAddForm" data-tree-kind="process" data-tree-parent="${esc(parentId)}">
+            <label class="ws-label">Tarefa</label>
+            <input type="text" value="${esc((task && task.nome) || parentId)}" disabled>
+            <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome do processo" required>
+            <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+            <label class="ws-label">Responsável</label>
+            <select name="assigneeId">
+              <option value="">Sem usuário</option>
+              ${userOptions}
+            </select>
+            <div class="modal-actions ws-modal-actions">
+              <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
+              <button type="submit" class="btn-save">Criar Processo</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function getWorkspaceListByKey(key) {
+  if (!state.workspaceData || !key) return null;
+  const list = state.workspaceData[key];
+  return Array.isArray(list) ? list : null;
+}
+
+function promptRequiredValue(label, currentValue, opts = {}) {
+  const maxLen = Number(opts.maxLen || 0);
+  const next = window.prompt(label, String(currentValue || ''));
+  if (next === null) return null;
+  const value = String(next).trim();
+  if (!value) {
+    showToast('Campo obrigatório.', 'info');
+    return '__INVALID__';
+  }
+  if (maxLen > 0 && value.length > maxLen) {
+    showToast(`Máximo de ${maxLen} caracteres.`, 'info');
+    return '__INVALID__';
+  }
+  return value;
+}
+
+function promptOptionalValue(label, currentValue) {
+  const next = window.prompt(label, String(currentValue || ''));
+  if (next === null) return null;
+  return String(next).trim();
+}
+
+function confirmDelete(label) {
+  return window.confirm(`Deseja excluir ${label}?`);
+}
+
+function editSimpleWorkspaceItem(listKey, itemId, navKey, itemLabel) {
+  const list = getWorkspaceListByKey(listKey);
+  if (!list) return;
+  const item = list.find((x) => String(x.id) === String(itemId));
+  if (!item) return;
+
+  const nome = promptRequiredValue(`Alterar ${itemLabel} - nome:`, item.nome || '', { maxLen: 120 });
+  if (nome === null) return;
+  if (nome === '__INVALID__') return;
+  const descricao = promptOptionalValue(`Alterar ${itemLabel} - descrição:`, item.descricao || '');
+  if (descricao === null) return;
+
+  item.nome = nome;
+  item.descricao = descricao;
+  saveWorkspaceData();
+  renderWorkspaceSection(navKey);
+  showToast(`${itemLabel} alterado(a).`, 'success');
+}
+
+function deleteSimpleWorkspaceItem(listKey, itemId, navKey, itemLabel) {
+  const list = getWorkspaceListByKey(listKey);
+  if (!list) return;
+  const idx = list.findIndex((x) => String(x.id) === String(itemId));
+  if (idx < 0) return;
+  if (!confirmDelete(`o(a) ${itemLabel.toLowerCase()}`)) return;
+
+  list.splice(idx, 1);
+  saveWorkspaceData();
+  renderWorkspaceSection(navKey);
+  showToast(`${itemLabel} excluído(a).`, 'success');
+}
+
 function renderPlanningBuilder(root) {
   const plans = state.workspaceData.planejamentos || [];
-  const selectedPlan = getSelectedPlan();
+  const selectedPlan = plans[0] || null;
+  if (selectedPlan) state.workspaceUI.selectedPlanId = selectedPlan.id;
   const linkedProjects = getProjectsForPlan(selectedPlan);
-  const unlinkedProjects = (state.workspaceData.projetos || []).filter((p) => !p.planId);
 
   const stats = {
     projetos: linkedProjects.length,
@@ -417,122 +661,143 @@ function renderPlanningBuilder(root) {
     processos: linkedProjects.reduce((acc, p) => acc + getTasksForProject(p.id).reduce((a, t) => a + getProcessesForTask(t.id).length, 0), 0),
   };
 
-  const planOptions = plans.map((p) => `<option value="${esc(p.id)}" ${p.id === state.workspaceUI.selectedPlanId ? 'selected' : ''}>${esc(String(p.ano))} - ${esc(p.nome)}</option>`).join('');
-  const attachOptions = unlinkedProjects.map((p) => `<option value="${esc(p.id)}">${esc(p.nome)}</option>`).join('');
-  const plansList = plans.length
-    ? plans.map((p) => `
-      <div class="ws-item ws-item-entity">
-        <div>
-          <strong>${esc(String(p.ano))} - ${esc(p.nome)}</strong><br>
-          <small>${esc(p.descricao || 'Sem descrição')}</small>
-        </div>
-        <button type="button" class="ws-open-planning" data-select-plan="${esc(p.id)}">
-          ${p.id === state.workspaceUI.selectedPlanId ? 'Plano Ativo' : 'Abrir Plano'}
-        </button>
-      </div>
-    `).join('')
-    : '<div class="ws-empty">Nenhum plano cadastrado.</div>';
-
   root.innerHTML = `
     <section class="plan-shell">
       <article class="ws-card plan-control-card">
         <h3>Plano Raiz</h3>
-        <form class="ws-form" id="wsStrategicPlanForm">
-          <input type="text" name="ano" maxlength="20" placeholder="Ano (ex: 2026)" required>
-          <input type="text" name="nome" placeholder="Nome do plano" required>
-          <textarea name="descricao" placeholder="Diretriz estratégica"></textarea>
-          <button type="submit">Criar Plano</button>
-        </form>
-
-        <div class="plan-divider"></div>
-
-        <div class="ws-form">
-          <label class="ws-label">Plano ativo</label>
-          <select id="wsPlanSelect">
-            <option value="">Selecione...</option>
-            ${planOptions}
-          </select>
+        <p>Use o popup para criar o plano estratégico, no mesmo padrão.</p>
+        <div class="plan-root-row">
+          <div class="plan-root-action">
+            <button type="button" class="ws-open-planning" data-open-workspace-modal="plan">Novo Planejamento</button>
+          </div>
+          ${selectedPlan
+            ? `
+              <div class="ws-item ws-item-entity plan-root-item">
+                <div>
+                  <strong>${esc(String(selectedPlan.ano))} - ${esc(selectedPlan.nome)}</strong><br>
+                  <small>${esc(selectedPlan.descricao || 'Sem descrição')}</small>
+                </div>
+                <div class="ws-item-mini-actions">
+                  <button type="button" class="ws-open-planning ws-open-edit" data-edit-plan="${esc(selectedPlan.id)}">Alterar</button>
+                  <button type="button" class="ws-open-planning ws-open-danger" data-delete-plan="${esc(selectedPlan.id)}">Excluir</button>
+                </div>
+              </div>
+            `
+            : '<div class="ws-empty">Nenhum plano raiz cadastrado.</div>'}
         </div>
-
-        <div class="ws-list ws-list-wide">
-          ${plansList}
-        </div>
-
-        <form class="ws-form" id="wsAttachProjectToPlanForm">
-          <label class="ws-label">Inserir projeto no plano (opcional)</label>
-          <select name="projectId" ${selectedPlan ? '' : 'disabled'}>
-            <option value="">Selecione projeto sem plano</option>
-            ${attachOptions}
-          </select>
-          <button type="submit" ${selectedPlan ? '' : 'disabled'}>Inserir no Plano</button>
-        </form>
+        <p>
+          <small>Use o ícone <strong>+</strong> na árvore: raiz adiciona projeto, projeto adiciona tarefa e tarefa adiciona processo.</small>
+        </p>
       </article>
 
       <article class="ws-card plan-tree-card">
-        <div class="plan-kpis">
-          <div class="plan-kpi"><strong>${stats.projetos}</strong><span>Projetos</span></div>
-          <div class="plan-kpi"><strong>${stats.tarefas}</strong><span>Tarefas</span></div>
-          <div class="plan-kpi"><strong>${stats.processos}</strong><span>Processos</span></div>
-        </div>
-
         <h3>Árvore Estratégica</h3>
-        ${renderAllPlansTrees(plans)}
-
-        <div class="plan-divider"></div>
-        <h3>Projetos no Plano (arraste para ordenar)</h3>
-        <div class="ws-project-board" id="wsProjectBoard">
-          ${renderProjectCards(linkedProjects)}
-        </div>
+        ${renderPlanningTree(selectedPlan, linkedProjects)}
       </article>
+
+      <div class="modal-overlay" id="wsPlanModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVO PLANEJAMENTO</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Novo Planejamento</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="plan" aria-label="Fechar">×</button>
+            </div>
+            <form class="ws-form ws-modal-form" id="wsStrategicPlanForm">
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Ano/Ciclo</label>
+                  <input type="text" name="ano" maxlength="20" placeholder="Ano (ex: 2026)" required>
+                </div>
+                <div>
+                  <label class="ws-label">Nome do plano</label>
+                  <input type="text" name="nome" placeholder="Nome do plano" required>
+                </div>
+              </div>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Diretriz estratégica"></textarea>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="plan">Cancelar</button>
+                <button type="submit" class="btn-save">Criar Plano</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      ${renderPlanningTreeAddModal(selectedPlan)}
     </section>
   `;
 }
 
 function renderPlanningTree(plan, projects) {
   if (!plan) return '<div class="ws-empty">Crie um plano raiz para visualizar a árvore.</div>';
-
-  const rootNodeId = `plan:${plan.id}`;
-  const rootOpen = isNodeOpen(rootNodeId);
-
   const projectLines = projects.map((project) => {
-    const projectNodeId = `project:${project.id}`;
-    const projectOpen = isNodeOpen(projectNodeId);
+    const managers = (project.managerIds || []).map((id) => userNameById(id)).filter(Boolean);
+    const managerLabel = managers.length ? `<small>Resp.: ${esc(managers.join(', '))}</small>` : '';
     const tasks = getTasksForProject(project.id);
 
     const tasksHtml = tasks.map((task) => {
-      const taskNodeId = `task:${task.id}`;
-      const taskOpen = isNodeOpen(taskNodeId);
+      const taskAssignee = task.assigneeId ? userNameById(task.assigneeId) : '';
+      const taskAssigneeLabel = taskAssignee ? `<small>Resp.: ${esc(taskAssignee)}</small>` : '';
       const processes = getProcessesForTask(task.id);
 
+      const processHtml = processes.map((proc) => {
+        const procAssignee = proc.assigneeId ? userNameById(proc.assigneeId) : '';
+        const procAssigneeLabel = procAssignee ? `<small>Resp.: ${esc(procAssignee)}</small>` : '';
+        return `
+          <li class="ws-org-item">
+            <div class="ws-org-node ws-tree-process">
+              <span>⚙ ${esc(proc.nome)}</span>
+              ${procAssigneeLabel}
+              ${renderTreeRemoveButton('process', proc.id, 'Excluir processo')}
+            </div>
+          </li>
+        `;
+      }).join('');
+
       return `
-        <li class="ws-tree-line">
-          <div class="ws-tree-node-row">
-            ${processes.length ? renderTreeToggle(taskNodeId, taskOpen) : '<span class="ws-tree-pad"></span>'}
-            <span class="ws-tree-node ws-tree-task">✔ ${esc(task.nome)}</span>
+        <li class="ws-org-item">
+          <div class="ws-org-node ws-tree-task">
+            <span>✔ ${esc(task.nome)}</span>
+            ${taskAssigneeLabel}
+            ${renderTreeAddButton('process', task.id, 'Adicionar processo')}
+            ${renderTreeRemoveButton('task', task.id, 'Excluir tarefa')}
           </div>
-          ${processes.length && taskOpen ? `<ul>${processes.map((proc) => `<li class="ws-tree-line"><span class="ws-tree-node ws-tree-process">⚙ ${esc(proc.nome)}</span></li>`).join('')}</ul>` : ''}
+          ${processes.length ? `<ul class="ws-org-level">${processHtml}</ul>` : ''}
         </li>
       `;
     }).join('');
 
     return `
-      <li class="ws-tree-line">
-        <div class="ws-tree-node-row">
-          ${tasks.length ? renderTreeToggle(projectNodeId, projectOpen) : '<span class="ws-tree-pad"></span>'}
-          <span class="ws-tree-node ws-tree-project">◆ ${esc(project.nome)}</span>
+      <li class="ws-org-item">
+        <div class="ws-org-node ws-tree-project">
+          <span>◆ ${esc(project.nome)}</span>
+          ${managerLabel}
+          ${renderTreeAddButton('task', project.id, 'Adicionar tarefa')}
+          ${renderTreeRemoveButton('project', project.id, 'Excluir projeto')}
         </div>
-        ${tasks.length && projectOpen ? `<ul>${tasksHtml}</ul>` : ''}
+        ${tasks.length ? `<ul class="ws-org-level">${tasksHtml}</ul>` : ''}
       </li>
     `;
   }).join('');
 
   return `
-    <div class="ws-tree-root-wrap">
-      <div class="ws-tree-node-row root-row">
-        ${renderTreeToggle(rootNodeId, rootOpen)}
-        <span class="ws-tree-node ws-tree-root">RAIZ ${esc(String(plan.ano))} • ${esc(plan.nome)}</span>
-      </div>
-      ${rootOpen ? `<ul class="ws-tree-root-list">${projectLines || '<li class="ws-empty">Sem projetos vinculados.</li>'}</ul>` : ''}
+    <div class="ws-org-chart">
+      <ul class="ws-org-level ws-org-root-level">
+        <li class="ws-org-item ws-org-single-root">
+          <div class="ws-org-node ws-tree-root">
+            <span>${esc(String(plan.ano))} • ${esc(plan.nome)}</span>
+            ${renderTreeAddButton('project', plan.id, 'Adicionar projeto')}
+          </div>
+          ${projects.length
+            ? `<ul class="ws-org-level">${projectLines}</ul>`
+            : '<div class="ws-empty">Sem projetos vinculados.</div>'}
+        </li>
+      </ul>
     </div>
   `;
 }
@@ -554,6 +819,14 @@ function renderAllPlansTrees(plans) {
 
 function renderTreeToggle(nodeId, open) {
   return `<button type="button" class="ws-tree-toggle" data-tree-node="${esc(nodeId)}">${open ? '-' : '+'}</button>`;
+}
+
+function renderTreeAddButton(kind, parentId, label) {
+  return `<button type="button" class="ws-tree-add-btn" data-tree-add="${esc(kind)}" data-tree-parent="${esc(parentId)}" aria-label="${esc(label)}" title="${esc(label)}">+</button>`;
+}
+
+function renderTreeRemoveButton(kind, itemId, label) {
+  return `<button type="button" class="ws-tree-remove-btn" data-tree-remove="${esc(kind)}" data-tree-id="${esc(itemId)}" aria-label="${esc(label)}" title="${esc(label)}">-</button>`;
 }
 
 function renderProjectCards(projects) {
@@ -606,25 +879,40 @@ function renderProjectsWorkspace(root) {
       </article>
 
       <div class="modal-overlay" id="wsProjectModalOverlay">
-        <div class="modal-create ws-modal-create">
-          <div class="ws-modal-body">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVO PROJETO</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
             <div class="ws-modal-header">
               <h3>Novo Projeto</h3>
               <button type="button" class="ws-modal-close" data-close-workspace-modal="project" aria-label="Fechar">×</button>
             </div>
-            <form class="ws-form" id="wsProjectForm">
-              <input type="text" name="nome" placeholder="Nome do projeto" required>
-              <textarea name="descricao" placeholder="Descrição"></textarea>
-              <label class="ws-label">Inserir no plano estratégico (opcional)</label>
-              <select name="planId">
-                <option value="">Sem plano</option>
-                ${planOptions}
-              </select>
-              <label class="ws-label">Gestores do projeto (max 2)</label>
-              <select name="managerIds" multiple size="4">
-                ${managerOptions}
-              </select>
-              <button type="submit">Salvar Projeto</button>
+            <form class="ws-form ws-modal-form" id="wsProjectForm">
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome do projeto" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Inserir no plano estratégico (opcional)</label>
+                  <select name="planId">
+                    <option value="">Sem plano</option>
+                    ${planOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="ws-label">Gestores do projeto (max 2)</label>
+                  <select name="managerIds" multiple size="4">
+                    ${managerOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="project">Cancelar</button>
+                <button type="submit" class="btn-save">Salvar Projeto</button>
+              </div>
             </form>
           </div>
         </div>
@@ -708,7 +996,10 @@ function renderProjectLinkItem(project, plans, selectedProjectId) {
       <form class="ws-inline-form" data-link-type="project" data-project-id="${esc(project.id)}">
         <select name="planId">${options}</select>
         <select name="managerIds" multiple size="4">${managerOptions}</select>
-        <button type="submit">Atualizar</button>
+        <div class="ws-item-mini-actions">
+          <button type="button" class="ws-open-planning ws-open-edit" data-edit-project="${esc(project.id)}">Alterar</button>
+          <button type="button" class="ws-open-planning ws-open-danger" data-delete-project="${esc(project.id)}">Excluir</button>
+        </div>
       </form>
     </div>
   `;
@@ -749,26 +1040,41 @@ function renderTasksWorkspace(root) {
       </article>
 
       <div class="modal-overlay" id="wsTaskModalOverlay">
-        <div class="modal-create ws-modal-create">
-          <div class="ws-modal-body">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVA TAREFA</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
             <div class="ws-modal-header">
               <h3>Nova Tarefa</h3>
               <button type="button" class="ws-modal-close" data-close-workspace-modal="task" aria-label="Fechar">×</button>
             </div>
-            <form class="ws-form" id="wsTaskForm">
-              <input type="text" name="nome" placeholder="Nome da tarefa" required>
-              <textarea name="descricao" placeholder="Descrição"></textarea>
-              <label class="ws-label">Inserir no projeto (opcional)</label>
-              <select name="projectId">
-                <option value="">Sem projeto</option>
-                ${projectOptions}
-              </select>
-              <label class="ws-label">Usuário responsável</label>
-              <select name="assigneeId">
-                <option value="">Sem usuário</option>
-                ${userOptions}
-              </select>
-              <button type="submit">Salvar Tarefa</button>
+            <form class="ws-form ws-modal-form" id="wsTaskForm">
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome da tarefa" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Inserir no projeto (opcional)</label>
+                  <select name="projectId">
+                    <option value="">Sem projeto</option>
+                    ${projectOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="ws-label">Usuário responsável</label>
+                  <select name="assigneeId">
+                    <option value="">Sem usuário</option>
+                    ${userOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="task">Cancelar</button>
+                <button type="submit" class="btn-save">Salvar Tarefa</button>
+              </div>
             </form>
           </div>
         </div>
@@ -826,7 +1132,10 @@ function renderTaskLinkItem(task, projects, selectedTaskId) {
       <form class="ws-inline-form" data-link-type="task" data-task-id="${esc(task.id)}">
         <select name="projectId">${options}</select>
         <select name="assigneeId">${userOptions}</select>
-        <button type="submit">Atualizar</button>
+        <div class="ws-item-mini-actions">
+          <button type="button" class="ws-open-planning ws-open-edit" data-edit-task="${esc(task.id)}">Alterar</button>
+          <button type="button" class="ws-open-planning ws-open-danger" data-delete-task="${esc(task.id)}">Excluir</button>
+        </div>
       </form>
     </div>
   `;
@@ -840,31 +1149,63 @@ function renderProcessesWorkspace(root) {
   const userOptions = users.map((u) => `<option value="${esc(u.id)}">${esc(u.name)}${u.email ? ` • ${esc(u.email)}` : ''}</option>`).join('');
 
   root.innerHTML = `
-    <article class="ws-card ws-focus">
-      <h3>Novo Processo</h3>
-      <form class="ws-form" id="wsProcessForm">
-        <input type="text" name="nome" placeholder="Nome do processo" required>
-        <textarea name="descricao" placeholder="Descrição"></textarea>
-        <label class="ws-label">Inserir na tarefa (opcional)</label>
-        <select name="taskId">
-          <option value="">Sem tarefa</option>
-          ${taskOptions}
-        </select>
-        <label class="ws-label">Usuário responsável</label>
-        <select name="assigneeId">
-          <option value="">Sem usuário</option>
-          ${userOptions}
-        </select>
-        <button type="submit">Salvar Processo</button>
-      </form>
-    </article>
+    <section class="ws-dual-layout">
+      <div class="ws-dual-left">
+        <article class="ws-card ws-focus">
+          <h3>Criar Processo</h3>
+          <p>Use o popup para cadastrar um novo processo, no mesmo padrão.</p>
+          <button type="button" class="ws-open-planning" data-open-workspace-modal="process">Novo Processo</button>
+        </article>
 
-    <article class="ws-card">
-      <h3>Processos cadastrados</h3>
-      <div class="ws-list ws-list-wide">
-        ${processes.length ? processes.map((process) => renderProcessLinkItem(process, tasks)).join('') : '<div class="ws-empty">Nenhum processo cadastrado.</div>'}
+        <article class="ws-card">
+          <h3>Processos cadastrados</h3>
+          <div class="ws-list ws-list-wide">
+            ${processes.length ? processes.map((process) => renderProcessLinkItem(process, tasks)).join('') : '<div class="ws-empty">Nenhum processo cadastrado.</div>'}
+          </div>
+        </article>
       </div>
-    </article>
+
+      <div class="modal-overlay" id="wsProcessModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVO PROCESSO</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Novo Processo</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="process" aria-label="Fechar">×</button>
+            </div>
+            <form class="ws-form ws-modal-form" id="wsProcessForm">
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome do processo" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Inserir na tarefa (opcional)</label>
+                  <select name="taskId">
+                    <option value="">Sem tarefa</option>
+                    ${taskOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="ws-label">Usuário responsável</label>
+                  <select name="assigneeId">
+                    <option value="">Sem usuário</option>
+                    ${userOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="process">Cancelar</button>
+                <button type="submit" class="btn-save">Salvar Processo</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </section>
   `;
 }
 
@@ -885,7 +1226,10 @@ function renderProcessLinkItem(process, tasks) {
       <form class="ws-inline-form" data-link-type="process" data-process-id="${esc(process.id)}">
         <select name="taskId">${options}</select>
         <select name="assigneeId">${userOptions}</select>
-        <button type="submit">Atualizar</button>
+        <div class="ws-item-mini-actions">
+          <button type="button" class="ws-open-planning ws-open-edit" data-edit-process="${esc(process.id)}">Alterar</button>
+          <button type="button" class="ws-open-planning ws-open-danger" data-delete-process="${esc(process.id)}">Excluir</button>
+        </div>
       </form>
     </div>
   `;
@@ -918,7 +1262,17 @@ function renderIndicadoresWorkspace(root) {
               const setor = ind.setorId ? setorById.get(String(ind.setorId)) : null;
               const setorLabel = setor ? `Setor: ${esc(setor.nome)}` : 'Sem setor';
               const metaLabel = ind.meta ? ` | Meta: ${esc(ind.meta)}` : '';
-              return `<div class="ws-item"><strong>${esc(ind.nome)}</strong><br><small>${setorLabel}${metaLabel}</small></div>`;
+              return `
+                <div class="ws-item ws-item-entity">
+                  <div>
+                    <strong>${esc(ind.nome)}</strong><br><small>${setorLabel}${metaLabel}</small>
+                  </div>
+                  <div class="ws-item-mini-actions">
+                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-indicator="${esc(ind.id)}">Alterar</button>
+                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-indicator="${esc(ind.id)}">Excluir</button>
+                  </div>
+                </div>
+              `;
             }).join('')
           : '<div class="ws-empty">Nenhum indicador cadastrado.</div>'}
       </div>
@@ -943,7 +1297,17 @@ function renderSetoresWorkspace(root) {
       <h3>Setores cadastrados</h3>
       <div class="ws-list">
         ${setores.length
-          ? setores.map((s) => `<div class="ws-item"><strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small></div>`).join('')
+          ? setores.map((s) => `
+            <div class="ws-item ws-item-entity">
+              <div>
+                <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
+              </div>
+              <div class="ws-item-mini-actions">
+                <button type="button" class="ws-open-planning ws-open-edit" data-edit-sector="${esc(s.id)}">Alterar</button>
+                <button type="button" class="ws-open-planning ws-open-danger" data-delete-sector="${esc(s.id)}">Excluir</button>
+              </div>
+            </div>
+          `).join('')
           : '<div class="ws-empty">Nenhum setor cadastrado.</div>'}
       </div>
     </article>
@@ -986,6 +1350,8 @@ function renderMeetingsWorkspace(root) {
                   <div class="ws-item-actions">
                     ${canStart ? `<button type="button" class="ws-open-planning" data-start-meeting="${esc(meeting.id)}">${esc(startLabel)}</button>` : ''}
                     <button type="button" class="ws-open-planning" data-open-meeting-detail="${esc(meeting.id)}">Abrir</button>
+                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-meeting="${esc(meeting.id)}">Alterar</button>
+                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-meeting="${esc(meeting.id)}">Excluir</button>
                   </div>
                 </div>
               `;
@@ -1060,6 +1426,12 @@ function renderMeetingTasksWorkspace(root) {
                     <span class="ws-badge">${meeting ? `Reunião: ${esc(meeting.name || '')}` : 'Sem reunião'}</span>
                     <br><span class="ws-badge">Responsável: ${esc(task.assigneeId ? userNameById(task.assigneeId) : 'Sem responsável')}</span>
                   </div>
+                  <div class="ws-item-actions-col">
+                    <div class="ws-item-mini-actions">
+                      <button type="button" class="ws-open-planning ws-open-edit" data-edit-meeting-task="${esc(task.id)}">Alterar</button>
+                      <button type="button" class="ws-open-planning ws-open-danger" data-delete-meeting-task="${esc(task.id)}">Excluir</button>
+                    </div>
+                  </div>
                 </div>
               `;
             }).join('') : '<div class="ws-empty">Nenhuma tarefa de reunião cadastrada.</div>'}
@@ -1084,26 +1456,41 @@ function renderMeetingTasksWorkspace(root) {
       </article>
 
       <div class="modal-overlay" id="wsMeetingTaskModalOverlay">
-        <div class="modal-create ws-modal-create">
-          <div class="ws-modal-body">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">TAREFA DE REUNIÃO</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
             <div class="ws-modal-header">
               <h3>Nova Tarefa de Reunião</h3>
               <button type="button" class="ws-modal-close" data-close-workspace-modal="meeting-task" aria-label="Fechar">×</button>
             </div>
-            <form class="ws-form" id="wsMeetingTaskForm">
-              <input type="text" name="nome" placeholder="Nome da tarefa" required>
-              <textarea name="descricao" placeholder="Descrição"></textarea>
-              <label class="ws-label">Reunião vinculada (opcional)</label>
-              <select name="meetingId">
-                <option value="">Sem reunião</option>
-                ${meetingOptions}
-              </select>
-              <label class="ws-label">Usuário responsável</label>
-              <select name="assigneeId">
-                <option value="">Sem usuário</option>
-                ${userOptions}
-              </select>
-              <button type="submit">Salvar Tarefa</button>
+            <form class="ws-form ws-modal-form" id="wsMeetingTaskForm">
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome da tarefa" required>
+              <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Reunião vinculada (opcional)</label>
+                  <select name="meetingId">
+                    <option value="">Sem reunião</option>
+                    ${meetingOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="ws-label">Usuário responsável</label>
+                  <select name="assigneeId">
+                    <option value="">Sem usuário</option>
+                    ${userOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-actions ws-modal-actions">
+                <button type="button" class="btn-cancel" data-close-workspace-modal="meeting-task">Cancelar</button>
+                <button type="submit" class="btn-save">Salvar Tarefa</button>
+              </div>
             </form>
           </div>
         </div>
@@ -1113,6 +1500,16 @@ function renderMeetingTasksWorkspace(root) {
 }
 
 function renderMeetingOpsWorkspace(navKey, root) {
+  if (navKey === 'relatorios') {
+    root.innerHTML = `
+      <article class="ws-card">
+        <h3>Em construção</h3>
+        <p>Esta funcionalidade estará disponível em breve.</p>
+      </article>
+    `;
+    return;
+  }
+
   const map = {
     'tarefas-reunioes': { key: 'reunioesTarefas', title: 'Nova tarefa de reunião', placeholder: 'Ex: Validar pauta da diretoria' },
     'processos-reunioes': { key: 'reunioesProcessos', title: 'Novo processo de reunião', placeholder: 'Ex: Fluxo de aprovação de ata' },
@@ -1123,22 +1520,71 @@ function renderMeetingOpsWorkspace(navKey, root) {
   const list = state.workspaceData[cfg.key] || [];
 
   root.innerHTML = `
-    <article class="ws-card ws-focus">
-      <h3>${cfg.title}</h3>
-      <form class="ws-form" id="wsOpsForm" data-ops-key="${cfg.key}">
-        <input type="text" name="nome" placeholder="${cfg.placeholder}" required>
-        <textarea name="descricao" placeholder="Descrição"></textarea>
-        <button type="submit">Salvar</button>
-      </form>
-    </article>
-    <article class="ws-card">
-      <h3>Itens cadastrados</h3>
-      <div class="ws-list">
-        ${list.length
-          ? list.map((item) => `<div class="ws-item"><strong>${esc(item.nome)}</strong><br><small>${esc(item.descricao || 'Sem descrição')}</small></div>`).join('')
-          : '<div class="ws-empty">Nenhum item cadastrado.</div>'}
+    <section class="ws-dual-layout">
+      <div class="ws-dual-left">
+        <article class="ws-card ws-focus">
+          <h3>${cfg.title}</h3>
+          ${navKey === 'processos-reunioes'
+            ? `
+              <p>Use popup no mesmo padrão de Reuniões.</p>
+              <button type="button" class="ws-open-planning" data-open-workspace-modal="meeting-process">Novo Processo de Reunião</button>
+            `
+            : `
+              <form class="ws-form" id="wsOpsForm" data-ops-key="${cfg.key}">
+                <input type="text" name="nome" placeholder="${cfg.placeholder}" required>
+                <textarea name="descricao" placeholder="Descrição"></textarea>
+                <button type="submit">Salvar</button>
+              </form>
+            `}
+        </article>
+        <article class="ws-card">
+          <h3>Itens cadastrados</h3>
+          <div class="ws-list">
+            ${list.length
+              ? list.map((item) => `
+                <div class="ws-item ws-item-entity">
+                  <div>
+                    <strong>${esc(item.nome)}</strong><br><small>${esc(item.descricao || 'Sem descrição')}</small>
+                  </div>
+                  <div class="ws-item-mini-actions">
+                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}">Alterar</button>
+                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}">Excluir</button>
+                  </div>
+                </div>
+              `).join('')
+              : '<div class="ws-empty">Nenhum item cadastrado.</div>'}
+          </div>
+        </article>
       </div>
-    </article>
+      ${navKey === 'processos-reunioes'
+        ? `
+          <div class="modal-overlay" id="wsMeetingProcessModalOverlay">
+            <div class="modal-create ws-modal-create ws-modal-like-meeting">
+              <div class="modal-recurrence ws-modal-recurrence">
+                <span class="recurrence-label">PROCESSO DE REUNIÃO</span>
+                <div class="recurrence-options">
+                  <button type="button" class="rec-btn active">WORKSPACE</button>
+                </div>
+              </div>
+              <div class="modal-body ws-modal-body">
+                <div class="ws-modal-header">
+                  <h3>Novo Processo de Reunião</h3>
+                  <button type="button" class="ws-modal-close" data-close-workspace-modal="meeting-process" aria-label="Fechar">×</button>
+                </div>
+                <form class="ws-form ws-modal-form" id="wsMeetingProcessForm">
+                  <input class="ws-modal-title-input" type="text" name="nome" placeholder="${cfg.placeholder}" required>
+                  <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
+                  <div class="modal-actions ws-modal-actions">
+                    <button type="button" class="btn-cancel" data-close-workspace-modal="meeting-process">Cancelar</button>
+                    <button type="submit" class="btn-save">Salvar Processo</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        `
+        : ''}
+    </section>
   `;
 }
 
@@ -1156,14 +1602,109 @@ function handleWorkspaceSubmit(e) {
       showToast('Preencha o campo de ano/ciclo (máximo 20 caracteres).', 'info');
       return;
     }
+    if ((state.workspaceData.planejamentos || []).length) {
+      showToast('Já existe um plano raiz. Use Alterar para editar o plano atual.', 'info');
+      return;
+    }
 
     const plan = { id: mkId('plan'), ano: anoRaw, nome, descricao, projectIds: [] };
     state.workspaceData.planejamentos.push(plan);
     state.workspaceUI.selectedPlanId = plan.id;
     state.workspaceUI.expandedNodes[`plan:${plan.id}`] = true;
     saveWorkspaceData();
+    closeWorkspaceModal('plan');
     renderWorkspaceSection('planejamento');
     showToast('Plano estratégico criado.', 'success');
+    return;
+  }
+
+  if (form.id === 'wsTreeAddForm') {
+    const kind = String(form.dataset.treeKind || '');
+    const parentId = String(form.dataset.treeParent || '');
+    const nome = String(form.nome.value || '').trim();
+    const descricao = String(form.descricao.value || '').trim();
+    if (!kind || !parentId || !nome) return;
+
+    if (kind === 'project') {
+      const selectedManagers = Array.from(form.querySelectorAll('select[name="managerIds"] option:checked')).map((opt) => String(opt.value || '')).filter(Boolean);
+      if (selectedManagers.length > 2) {
+        showToast('Projeto permite no máximo 2 responsáveis.', 'info');
+        return;
+      }
+      const plan = (state.workspaceData.planejamentos || []).find((p) => String(p.id) === parentId);
+      if (!plan) return;
+      const project = { id: mkId('proj'), nome, descricao, planId: plan.id, managerIds: selectedManagers.slice(0, 2) };
+      state.workspaceData.projetos.push(project);
+      plan.projectIds = plan.projectIds || [];
+      if (!plan.projectIds.includes(project.id)) plan.projectIds.push(project.id);
+      saveWorkspaceData();
+      clearTreeAddState();
+      closeWorkspaceModal('tree-add');
+      renderWorkspaceSection('planejamento');
+      showToast('Projeto criado na raiz.', 'success');
+      return;
+    }
+
+    if (kind === 'task') {
+      const assigneeId = String(form.assigneeId.value || '') || null;
+      state.workspaceData.tarefas.push({ id: mkId('task'), nome, descricao, projectId: parentId, assigneeId });
+      saveWorkspaceData();
+      clearTreeAddState();
+      closeWorkspaceModal('tree-add');
+      renderWorkspaceSection('planejamento');
+      showToast('Tarefa criada no projeto.', 'success');
+      return;
+    }
+
+    if (kind === 'process') {
+      const assigneeId = String(form.assigneeId.value || '') || null;
+      state.workspaceData.processos.push({ id: mkId('proc'), nome, descricao, taskId: parentId, assigneeId });
+      saveWorkspaceData();
+      clearTreeAddState();
+      closeWorkspaceModal('tree-add');
+      renderWorkspaceSection('planejamento');
+      showToast('Processo criado na tarefa.', 'success');
+      return;
+    }
+  }
+
+  if (form.id === 'wsQuickProjectInPlanForm') {
+    const plan = getSelectedPlan();
+    if (!plan) {
+      showToast('Crie o plano raiz antes de inserir projetos.', 'info');
+      return;
+    }
+    const nome = String(form.nome.value || '').trim();
+    const descricao = String(form.descricao.value || '').trim();
+    const selectedManagers = Array.from(form.querySelectorAll('select[name="managerIds"] option:checked')).map((opt) => String(opt.value || '')).filter(Boolean);
+    if (!nome) return;
+    if (selectedManagers.length > 2) {
+      showToast('Projeto permite no máximo 2 responsáveis.', 'info');
+      return;
+    }
+    const project = { id: mkId('proj'), nome, descricao, planId: plan.id, managerIds: selectedManagers.slice(0, 2) };
+    state.workspaceData.projetos.push(project);
+    plan.projectIds = plan.projectIds || [];
+    if (!plan.projectIds.includes(project.id)) plan.projectIds.push(project.id);
+    saveWorkspaceData();
+    renderWorkspaceSection('planejamento');
+    showToast('Projeto criado no plano raiz.', 'success');
+    return;
+  }
+
+  if (form.id === 'wsQuickTaskInProjectForm') {
+    const projectId = String(form.projectId.value || '') || null;
+    const nome = String(form.nome.value || '').trim();
+    const descricao = String(form.descricao.value || '').trim();
+    const assigneeId = String(form.assigneeId.value || '') || null;
+    if (!projectId || !nome) {
+      showToast('Selecione o projeto e informe o nome da tarefa.', 'info');
+      return;
+    }
+    state.workspaceData.tarefas.push({ id: mkId('task'), nome, descricao, projectId, assigneeId });
+    saveWorkspaceData();
+    renderWorkspaceSection('planejamento');
+    showToast('Tarefa criada no projeto.', 'success');
     return;
   }
 
@@ -1258,8 +1799,22 @@ function handleWorkspaceSubmit(e) {
 
     state.workspaceData.processos.push({ id: mkId('proc'), nome, descricao, taskId, assigneeId });
     saveWorkspaceData();
+    closeWorkspaceModal('process');
     renderWorkspaceSection('processos');
     showToast('Processo salvo.', 'success');
+    return;
+  }
+
+  if (form.id === 'wsMeetingProcessForm') {
+    const nome = String(form.nome.value || '').trim();
+    const descricao = String(form.descricao.value || '').trim();
+    if (!nome) return;
+    state.workspaceData.reunioesProcessos = Array.isArray(state.workspaceData.reunioesProcessos) ? state.workspaceData.reunioesProcessos : [];
+    state.workspaceData.reunioesProcessos.push({ id: mkId('ops'), nome, descricao });
+    saveWorkspaceData();
+    closeWorkspaceModal('meeting-process');
+    renderWorkspaceSection('processos-reunioes');
+    showToast('Processo de reunião salvo.', 'success');
     return;
   }
 
@@ -1315,7 +1870,7 @@ function handleWorkspaceSubmit(e) {
     if (!nome || !responsavel) return;
     state.workspaceData.setores.push({ id: mkId('setor'), nome, responsavel, meta });
     saveWorkspaceData();
-    renderWorkspaceSection(state.activeNav || 'setores');
+    renderWorkspaceSection('configuracoes');
     showToast('Setor salvo.', 'success');
     return;
   }
@@ -1328,7 +1883,7 @@ function handleWorkspaceSubmit(e) {
     state.workspaceData.indicadores = Array.isArray(state.workspaceData.indicadores) ? state.workspaceData.indicadores : [];
     state.workspaceData.indicadores.push({ id: mkId('ind'), nome, setorId, meta });
     saveWorkspaceData();
-    renderWorkspaceSection('indicadores');
+    renderWorkspaceSection('configuracoes');
     showToast('Indicador salvo.', 'success');
     return;
   }
@@ -1372,9 +1927,12 @@ function handleWorkspaceChange(e) {
   const target = e.target;
   if (!(target instanceof HTMLElement)) return;
 
-  if (target.id === 'wsPlanSelect' && target instanceof HTMLSelectElement) {
-    state.workspaceUI.selectedPlanId = target.value || '';
-    renderWorkspaceSection('planejamento');
+  if (target instanceof HTMLSelectElement) {
+    const inlineForm = target.closest('.ws-inline-form[data-link-type]');
+    if (inlineForm && inlineForm instanceof HTMLFormElement) {
+      inlineForm.requestSubmit();
+      return;
+    }
   }
 }
 
@@ -1420,10 +1978,90 @@ function handleWorkspaceClick(e) {
     return;
   }
 
+  const editMeetingBtn = e.target.closest('[data-edit-meeting]');
+  if (editMeetingBtn) {
+    const meetingId = String(editMeetingBtn.dataset.editMeeting || '');
+    const meeting = (state.allMeetings || []).find((m) => String(m.id) === meetingId);
+    if (!meeting) return;
+    if (typeof openModalForEdit === 'function') {
+      openModalForEdit(meeting);
+    }
+    return;
+  }
+
+  const deleteMeetingBtn = e.target.closest('[data-delete-meeting]');
+  if (deleteMeetingBtn) {
+    const meetingId = String(deleteMeetingBtn.dataset.deleteMeeting || '');
+    if (!confirmDelete('a reunião')) return;
+    const meetings = (typeof getLocalMeetings === 'function') ? getLocalMeetings() : (state.allMeetings || []);
+    const next = (meetings || []).filter((m) => String(m.id) !== meetingId);
+    if (typeof saveLocalMeetings === 'function') saveLocalMeetings(next);
+    state.allMeetings = next;
+    if (typeof reloadMeetings === 'function') {
+      reloadMeetings();
+    } else {
+      renderWorkspaceSection('reunioes-workspace');
+    }
+    showToast('Reunião excluída.', 'success');
+    return;
+  }
+
   const openModalBtn = e.target.closest('[data-open-workspace-modal]');
   if (openModalBtn) {
     openWorkspaceModal(String(openModalBtn.dataset.openWorkspaceModal || ''));
     return;
+  }
+
+  const treeAddBtn = e.target.closest('[data-tree-add]');
+  if (treeAddBtn) {
+    const kind = String(treeAddBtn.dataset.treeAdd || '');
+    const parentId = String(treeAddBtn.dataset.treeParent || '');
+    if (!kind || !parentId) return;
+    setTreeAddState(kind, parentId);
+    renderWorkspaceSection('planejamento');
+    openWorkspaceModal('tree-add');
+    return;
+  }
+
+  const treeRemoveBtn = e.target.closest('[data-tree-remove]');
+  if (treeRemoveBtn) {
+    const kind = String(treeRemoveBtn.dataset.treeRemove || '');
+    const itemId = String(treeRemoveBtn.dataset.treeId || '');
+    if (!kind || !itemId) return;
+
+    if (kind === 'project') {
+      if (!confirmDelete('o projeto')) return;
+      const taskIds = (state.workspaceData.tarefas || []).filter((t) => String(t.projectId || '') === itemId).map((t) => String(t.id));
+      state.workspaceData.processos = (state.workspaceData.processos || []).filter((p) => !taskIds.includes(String(p.taskId || '')));
+      state.workspaceData.tarefas = (state.workspaceData.tarefas || []).filter((t) => String(t.projectId || '') !== itemId);
+      state.workspaceData.projetos = (state.workspaceData.projetos || []).filter((p) => String(p.id) !== itemId);
+      (state.workspaceData.planejamentos || []).forEach((plan) => {
+        plan.projectIds = Array.isArray(plan.projectIds) ? plan.projectIds.filter((id) => String(id) !== itemId) : [];
+      });
+      saveWorkspaceData();
+      renderWorkspaceSection('planejamento');
+      showToast('Projeto excluído.', 'success');
+      return;
+    }
+
+    if (kind === 'task') {
+      if (!confirmDelete('a tarefa')) return;
+      state.workspaceData.processos = (state.workspaceData.processos || []).filter((p) => String(p.taskId || '') !== itemId);
+      state.workspaceData.tarefas = (state.workspaceData.tarefas || []).filter((t) => String(t.id) !== itemId);
+      saveWorkspaceData();
+      renderWorkspaceSection('planejamento');
+      showToast('Tarefa excluída.', 'success');
+      return;
+    }
+
+    if (kind === 'process') {
+      if (!confirmDelete('o processo')) return;
+      state.workspaceData.processos = (state.workspaceData.processos || []).filter((p) => String(p.id) !== itemId);
+      saveWorkspaceData();
+      renderWorkspaceSection('planejamento');
+      showToast('Processo excluído.', 'success');
+      return;
+    }
   }
 
   const closeModalBtn = e.target.closest('[data-close-workspace-modal]');
@@ -1434,9 +2072,13 @@ function handleWorkspaceClick(e) {
 
   const overlay = e.target.closest('.modal-overlay');
   if (overlay && e.target === overlay) {
+    if (overlay.id === 'wsPlanModalOverlay') closeWorkspaceModal('plan');
+    if (overlay.id === 'wsTreeAddModalOverlay') closeWorkspaceModal('tree-add');
     if (overlay.id === 'wsProjectModalOverlay') closeWorkspaceModal('project');
     if (overlay.id === 'wsTaskModalOverlay') closeWorkspaceModal('task');
     if (overlay.id === 'wsMeetingTaskModalOverlay') closeWorkspaceModal('meeting-task');
+    if (overlay.id === 'wsProcessModalOverlay') closeWorkspaceModal('process');
+    if (overlay.id === 'wsMeetingProcessModalOverlay') closeWorkspaceModal('meeting-process');
     return;
   }
 
@@ -1472,6 +2114,197 @@ function handleWorkspaceClick(e) {
   if (selectMeetingTask) {
     state.workspaceUI.selectedMeetingTaskId = String(selectMeetingTask.dataset.selectMeetingTask || '');
     renderWorkspaceSection('tarefas-reunioes');
+    return;
+  }
+
+  const editPlanBtn = e.target.closest('[data-edit-plan]');
+  if (editPlanBtn) {
+    const planId = String(editPlanBtn.dataset.editPlan || '');
+    const plan = (state.workspaceData.planejamentos || []).find((p) => String(p.id) === planId);
+    if (!plan) return;
+    const anoRaw = promptRequiredValue('Alterar plano - ano/ciclo:', plan.ano, { maxLen: 20 });
+    if (anoRaw === null || anoRaw === '__INVALID__') return;
+    const nome = promptRequiredValue('Alterar plano - nome:', plan.nome || '', { maxLen: 120 });
+    if (nome === null || nome === '__INVALID__') return;
+    const descricao = promptOptionalValue('Alterar plano - descrição:', plan.descricao || '');
+    if (descricao === null) return;
+    plan.ano = anoRaw;
+    plan.nome = nome;
+    plan.descricao = descricao;
+    saveWorkspaceData();
+    renderWorkspaceSection('planejamento');
+    showToast('Plano alterado.', 'success');
+    return;
+  }
+
+  const deletePlanBtn = e.target.closest('[data-delete-plan]');
+  if (deletePlanBtn) {
+    const planId = String(deletePlanBtn.dataset.deletePlan || '');
+    const plans = state.workspaceData.planejamentos || [];
+    const plan = plans.find((p) => String(p.id) === planId);
+    if (!plan) return;
+    if (!confirmDelete('o planejamento')) return;
+
+    (state.workspaceData.projetos || []).forEach((project) => {
+      if (String(project.planId || '') === planId) project.planId = null;
+    });
+    state.workspaceData.planejamentos = plans.filter((p) => String(p.id) !== planId);
+    if (String(state.workspaceUI.selectedPlanId || '') === planId) {
+      state.workspaceUI.selectedPlanId = (state.workspaceData.planejamentos[0] && state.workspaceData.planejamentos[0].id) || '';
+    }
+    saveWorkspaceData();
+    renderWorkspaceSection('planejamento');
+    showToast('Planejamento excluído.', 'success');
+    return;
+  }
+
+  const editProjectBtn = e.target.closest('[data-edit-project]');
+  if (editProjectBtn) {
+    editSimpleWorkspaceItem('projetos', String(editProjectBtn.dataset.editProject || ''), 'projetos', 'Projeto');
+    return;
+  }
+
+  const deleteProjectBtn = e.target.closest('[data-delete-project]');
+  if (deleteProjectBtn) {
+    const projectId = String(deleteProjectBtn.dataset.deleteProject || '');
+    if (!confirmDelete('o projeto')) return;
+    const projects = state.workspaceData.projetos || [];
+    state.workspaceData.projetos = projects.filter((p) => String(p.id) !== projectId);
+    (state.workspaceData.planejamentos || []).forEach((plan) => {
+      plan.projectIds = Array.isArray(plan.projectIds) ? plan.projectIds.filter((id) => String(id) !== projectId) : [];
+    });
+    (state.workspaceData.tarefas || []).forEach((task) => {
+      if (String(task.projectId || '') === projectId) task.projectId = null;
+    });
+    if (String(state.workspaceUI.selectedProjectId || '') === projectId) state.workspaceUI.selectedProjectId = '';
+    saveWorkspaceData();
+    renderWorkspaceSection('projetos');
+    showToast('Projeto excluído.', 'success');
+    return;
+  }
+
+  const editTaskBtn = e.target.closest('[data-edit-task]');
+  if (editTaskBtn) {
+    editSimpleWorkspaceItem('tarefas', String(editTaskBtn.dataset.editTask || ''), 'tarefas', 'Tarefa');
+    return;
+  }
+
+  const deleteTaskBtn = e.target.closest('[data-delete-task]');
+  if (deleteTaskBtn) {
+    const taskId = String(deleteTaskBtn.dataset.deleteTask || '');
+    if (!confirmDelete('a tarefa')) return;
+    state.workspaceData.tarefas = (state.workspaceData.tarefas || []).filter((t) => String(t.id) !== taskId);
+    (state.workspaceData.processos || []).forEach((process) => {
+      if (String(process.taskId || '') === taskId) process.taskId = null;
+    });
+    if (String(state.workspaceUI.selectedTaskId || '') === taskId) state.workspaceUI.selectedTaskId = '';
+    saveWorkspaceData();
+    renderWorkspaceSection('tarefas');
+    showToast('Tarefa excluída.', 'success');
+    return;
+  }
+
+  const editProcessBtn = e.target.closest('[data-edit-process]');
+  if (editProcessBtn) {
+    editSimpleWorkspaceItem('processos', String(editProcessBtn.dataset.editProcess || ''), 'processos', 'Processo');
+    return;
+  }
+
+  const deleteProcessBtn = e.target.closest('[data-delete-process]');
+  if (deleteProcessBtn) {
+    deleteSimpleWorkspaceItem('processos', String(deleteProcessBtn.dataset.deleteProcess || ''), 'processos', 'Processo');
+    return;
+  }
+
+  const editMeetingTaskBtn = e.target.closest('[data-edit-meeting-task]');
+  if (editMeetingTaskBtn) {
+    editSimpleWorkspaceItem('reunioesTarefas', String(editMeetingTaskBtn.dataset.editMeetingTask || ''), 'tarefas-reunioes', 'Tarefa de reunião');
+    return;
+  }
+
+  const deleteMeetingTaskBtn = e.target.closest('[data-delete-meeting-task]');
+  if (deleteMeetingTaskBtn) {
+    const meetingTaskId = String(deleteMeetingTaskBtn.dataset.deleteMeetingTask || '');
+    deleteSimpleWorkspaceItem('reunioesTarefas', meetingTaskId, 'tarefas-reunioes', 'Tarefa de reunião');
+    if (String(state.workspaceUI.selectedMeetingTaskId || '') === meetingTaskId) state.workspaceUI.selectedMeetingTaskId = '';
+    return;
+  }
+
+  const editOpsItemBtn = e.target.closest('[data-edit-ops-item]');
+  if (editOpsItemBtn) {
+    const itemId = String(editOpsItemBtn.dataset.editOpsItem || '');
+    const opsKey = String(editOpsItemBtn.dataset.opsKey || '');
+    if (!opsKey) return;
+    const navKey = state.activeNav || (opsKey === 'reunioesProcessos' ? 'processos-reunioes' : opsKey);
+    editSimpleWorkspaceItem(opsKey, itemId, navKey, 'Item');
+    return;
+  }
+
+  const deleteOpsItemBtn = e.target.closest('[data-delete-ops-item]');
+  if (deleteOpsItemBtn) {
+    const itemId = String(deleteOpsItemBtn.dataset.deleteOpsItem || '');
+    const opsKey = String(deleteOpsItemBtn.dataset.opsKey || '');
+    if (!opsKey) return;
+    const navKey = state.activeNav || (opsKey === 'reunioesProcessos' ? 'processos-reunioes' : opsKey);
+    deleteSimpleWorkspaceItem(opsKey, itemId, navKey, 'Item');
+    return;
+  }
+
+  const editIndicatorBtn = e.target.closest('[data-edit-indicator]');
+  if (editIndicatorBtn) {
+    const indicatorId = String(editIndicatorBtn.dataset.editIndicator || '');
+    const list = state.workspaceData.indicadores || [];
+    const ind = list.find((x) => String(x.id) === indicatorId);
+    if (!ind) return;
+    const nome = promptRequiredValue('Alterar indicador - nome:', ind.nome || '', { maxLen: 120 });
+    if (nome === null || nome === '__INVALID__') return;
+    const meta = promptOptionalValue('Alterar indicador - meta:', ind.meta || '');
+    if (meta === null) return;
+    ind.nome = nome;
+    ind.meta = meta;
+    saveWorkspaceData();
+    renderWorkspaceSection('configuracoes');
+    showToast('Indicador alterado.', 'success');
+    return;
+  }
+
+  const deleteIndicatorBtn = e.target.closest('[data-delete-indicator]');
+  if (deleteIndicatorBtn) {
+    deleteSimpleWorkspaceItem('indicadores', String(deleteIndicatorBtn.dataset.deleteIndicator || ''), 'configuracoes', 'Indicador');
+    return;
+  }
+
+  const editSectorBtn = e.target.closest('[data-edit-sector]');
+  if (editSectorBtn) {
+    const sectorId = String(editSectorBtn.dataset.editSector || '');
+    const setor = (state.workspaceData.setores || []).find((x) => String(x.id) === sectorId);
+    if (!setor) return;
+    const nome = promptRequiredValue('Alterar setor - nome:', setor.nome || '', { maxLen: 120 });
+    if (nome === null || nome === '__INVALID__') return;
+    const responsavel = promptRequiredValue('Alterar setor - responsável:', setor.responsavel || '', { maxLen: 120 });
+    if (responsavel === null || responsavel === '__INVALID__') return;
+    const meta = promptOptionalValue('Alterar setor - meta:', setor.meta || '');
+    if (meta === null) return;
+    setor.nome = nome;
+    setor.responsavel = responsavel;
+    setor.meta = meta;
+    saveWorkspaceData();
+    renderWorkspaceSection('configuracoes');
+    showToast('Setor alterado.', 'success');
+    return;
+  }
+
+  const deleteSectorBtn = e.target.closest('[data-delete-sector]');
+  if (deleteSectorBtn) {
+    const sectorId = String(deleteSectorBtn.dataset.deleteSector || '');
+    if (!confirmDelete('o setor')) return;
+    state.workspaceData.setores = (state.workspaceData.setores || []).filter((x) => String(x.id) !== sectorId);
+    (state.workspaceData.indicadores || []).forEach((ind) => {
+      if (String(ind.setorId || '') === sectorId) ind.setorId = null;
+    });
+    saveWorkspaceData();
+    renderWorkspaceSection('configuracoes');
+    showToast('Setor excluído.', 'success');
     return;
   }
 
@@ -1545,12 +2378,20 @@ function isNodeOpen(nodeId) {
 }
 
 function openWorkspaceModal(kind) {
-  const id = kind === 'project'
+  const id = kind === 'plan'
+    ? 'wsPlanModalOverlay'
+    : kind === 'tree-add'
+      ? 'wsTreeAddModalOverlay'
+    : kind === 'project'
     ? 'wsProjectModalOverlay'
     : kind === 'task'
       ? 'wsTaskModalOverlay'
       : kind === 'meeting-task'
         ? 'wsMeetingTaskModalOverlay'
+        : kind === 'process'
+          ? 'wsProcessModalOverlay'
+          : kind === 'meeting-process'
+            ? 'wsMeetingProcessModalOverlay'
         : '';
   if (!id) return;
   const overlay = document.getElementById(id);
@@ -1559,15 +2400,24 @@ function openWorkspaceModal(kind) {
 }
 
 function closeWorkspaceModal(kind) {
-  const id = kind === 'project'
+  const id = kind === 'plan'
+    ? 'wsPlanModalOverlay'
+    : kind === 'tree-add'
+      ? 'wsTreeAddModalOverlay'
+    : kind === 'project'
     ? 'wsProjectModalOverlay'
     : kind === 'task'
       ? 'wsTaskModalOverlay'
       : kind === 'meeting-task'
         ? 'wsMeetingTaskModalOverlay'
+        : kind === 'process'
+          ? 'wsProcessModalOverlay'
+          : kind === 'meeting-process'
+            ? 'wsMeetingProcessModalOverlay'
         : '';
   if (!id) return;
   const overlay = document.getElementById(id);
   if (!overlay) return;
   overlay.classList.remove('open');
+  if (kind === 'tree-add') clearTreeAddState();
 }

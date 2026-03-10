@@ -24,6 +24,10 @@ function setupDetailView() {
       const input = e.target;
       const text = input.value.trim();
       if (!text || !state.currentMeeting) return;
+      if (isMeetingFinalized(state.currentMeeting)) {
+        showToast('Reuniões finalizadas não permitem novos destaques.', 'info');
+        return;
+      }
 
       try {
         state.currentMeeting.highlights = state.currentMeeting.highlights || [];
@@ -66,12 +70,18 @@ function setupDetailView() {
 
   /* ── Pauta input ─────────────────────────────────────────────────────── */
   const pautaInput = document.getElementById('pautaInput');
+  const pautaAssigneeSelect = document.getElementById('pautaAssignee');
+  populatePautaAssigneeSelect();
   if (pautaInput) {
     pautaInput.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
         e.preventDefault();
         const text = pautaInput.value.trim();
         if (!text || !state.currentMeeting) return;
+        if (isMeetingFinalized(state.currentMeeting)) {
+          showToast('Reuniões finalizadas não permitem novas pautas.', 'info');
+          return;
+        }
 
         try {
           state.currentMeeting.pautas = state.currentMeeting.pautas || [];
@@ -80,7 +90,8 @@ function setupDetailView() {
             text,
             description: '',
             checked: false,
-            assignee: getCurrentUserInitials(),
+            assignee: (pautaAssigneeSelect && pautaAssigneeSelect.value) || getCurrentUserInitials(),
+            tasks: [],
             createdAt: new Date().toISOString()
           });
           persistCurrentMeetingLocal();
@@ -95,22 +106,6 @@ function setupDetailView() {
 
   /* ── Filter dropdowns (responsável / status) ─────────────────────────── */
   setupColFilters();
-
-  document.querySelectorAll('.detail-col-right .col-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.detail-col-right .col-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      renderRightColumn();
-    });
-  });
-
-  const rightAdd = document.getElementById('btnRightAdd');
-  if (rightAdd) {
-    rightAdd.addEventListener('click', () => {
-      const input = document.getElementById('rightItemInput');
-      if (input) input.focus();
-    });
-  }
 
   document.getElementById('btnUpload').addEventListener('click', () => {
     document.getElementById('fileInput').click();
@@ -225,10 +220,30 @@ function openMeetingDetail(meeting) {
 
     renderHighlights();
     renderPautas();
-    renderRightColumn();
   }
+  meeting = state.currentMeeting || meeting;
 
   document.getElementById('detailTitle').textContent = meeting.name;
+  const detailStatusPill = document.getElementById('detailStatusPill');
+  const detailFinalizedAt = document.getElementById('detailFinalizedAt');
+  if (detailStatusPill) {
+    const statusLabel = meeting.status === 'completed'
+      ? 'Finalizada'
+      : meeting.status === 'in_progress'
+        ? 'Em andamento'
+        : 'Não iniciada';
+    detailStatusPill.textContent = statusLabel;
+    detailStatusPill.classList.toggle('status-completed', meeting.status === 'completed');
+  }
+  if (detailFinalizedAt) {
+    let finalLabel = formatDateTimeBR(meeting.completedAt || '');
+    if (!finalLabel && meeting.status === 'completed' && meeting.date) {
+      const baseIso = `${meeting.date}T${meeting.time || '00:00'}:00`;
+      finalLabel = formatDateTimeBR(baseIso);
+    }
+    detailFinalizedAt.textContent = finalLabel ? `Finalizada em ${finalLabel}` : '';
+    detailFinalizedAt.classList.toggle('hidden', !finalLabel || meeting.status !== 'completed');
+  }
 
   const dateObj = new Date(meeting.date + 'T00:00:00');
   document.getElementById('detailDate').textContent =
@@ -270,6 +285,26 @@ function openMeetingDetail(meeting) {
 
   document.getElementById('detailDesc').textContent = meeting.description || '';
 
+  const isFinalized = isMeetingFinalized(meeting);
+  const highlightInput = document.getElementById('highlightInput');
+  if (highlightInput) {
+    highlightInput.disabled = isFinalized;
+    highlightInput.placeholder = isFinalized ? 'Reunião finalizada: inclusão bloqueada' : 'Novo destaque';
+  }
+  const pautaInput = document.getElementById('pautaInput');
+  if (pautaInput) {
+    pautaInput.disabled = isFinalized;
+    pautaInput.placeholder = isFinalized ? 'Reunião finalizada: inclusão bloqueada' : 'Nova pauta';
+  }
+  const pautaAssignee = document.getElementById('pautaAssignee');
+  if (pautaAssignee) pautaAssignee.disabled = isFinalized;
+  const btnAddPauta = document.getElementById('btnAddPauta');
+  if (btnAddPauta) {
+    btnAddPauta.disabled = isFinalized;
+    btnAddPauta.style.opacity = isFinalized ? '0.45' : '';
+    btnAddPauta.style.pointerEvents = isFinalized ? 'none' : '';
+  }
+
   document.querySelectorAll('.detail-tab').forEach(t => t.classList.remove('active'));
   document.querySelector('.detail-tab[data-tab="resumo"]').classList.add('active');
   document.getElementById('tabResumo').classList.remove('hidden');
@@ -278,15 +313,11 @@ function openMeetingDetail(meeting) {
 
   renderHighlights();
   renderPautas();
+  populatePautaAssigneeSelect();
 
   state.currentMeeting.tasks = Array.isArray(state.currentMeeting.tasks) ? state.currentMeeting.tasks : [];
   state.currentMeeting.notes = Array.isArray(state.currentMeeting.notes) ? state.currentMeeting.notes : [];
   state.currentMeeting.attachments = Array.isArray(state.currentMeeting.attachments) ? state.currentMeeting.attachments : [];
-  const rightTabs = document.querySelectorAll('.detail-col-right .col-tab');
-  rightTabs.forEach(t => t.classList.remove('active'));
-  const defaultRightTab = document.querySelector('.detail-col-right .col-tab[data-coltab="tarefas"]');
-  if (defaultRightTab) defaultRightTab.classList.add('active');
-  renderRightColumn();
 
   // Reset destaques/pautas tabs
   const tabDest = document.getElementById('tabBtnDestaques');
@@ -370,6 +401,19 @@ function fetchMeetingByIdForCurrentUser(meetingId) {
     return getMeetingByIdLocal(meetingId);
   }
   return null;
+}
+
+function isMeetingFinalized(meeting) {
+  return Boolean(meeting && meeting.status === 'completed');
+}
+
+function formatDateTimeBR(isoString) {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  if (Number.isNaN(d.getTime())) return '';
+  const date = d.toLocaleDateString('pt-BR');
+  const time = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return `${date} ${time}`;
 }
 
 function persistCurrentMeetingLocal() {
@@ -566,7 +610,6 @@ async function refreshMeetingsAndDetails(meetingId, user) {
       state.currentMeeting = localMeeting;
       renderHighlights();
       renderPautas();
-      renderRightColumn();
     }
   }
 }
@@ -934,6 +977,7 @@ async function persistCurrentMeetingPautas() {
 function renderHighlights() {
   const list = document.getElementById('highlightsList');
   let highlights = (state.currentMeeting && state.currentMeeting.highlights) || [];
+  const meetingFinalized = isMeetingFinalized(state.currentMeeting);
 
   // Apply filters
   if (state.filterResp) {
@@ -1000,6 +1044,10 @@ function renderHighlights() {
 
   list.querySelectorAll('[data-hl-del]').forEach(btn => {
     btn.addEventListener('click', async () => {
+      if (meetingFinalized) {
+        showToast('Reuniões finalizadas não permitem alterações em destaques.', 'info');
+        return;
+      }
       const hlId = btn.dataset.hlDel;
       try {
         state.currentMeeting.highlights = (state.currentMeeting.highlights || []).filter(h => h.id !== hlId);
@@ -1014,6 +1062,10 @@ function renderHighlights() {
 
   list.querySelectorAll('[data-hl-edit]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (meetingFinalized) {
+        showToast('Reuniões finalizadas não permitem alterações em destaques.', 'info');
+        return;
+      }
       const hlId = btn.dataset.hlEdit;
       const hl = highlights.find(h => h.id === hlId);
       if (!hl) return;
@@ -1074,7 +1126,14 @@ function renderAtaAccordionBody(meeting) {
   const attachments = Array.isArray(meeting.attachments) ? meeting.attachments : [];
   const highlights = Array.isArray(meeting.highlights) ? meeting.highlights : [];
   const pautas = Array.isArray(meeting.pautas) ? meeting.pautas : [];
-  const tasks = Array.isArray(meeting.tasks) ? meeting.tasks : [];
+  const tasksFromPautas = pautas.flatMap((p) =>
+    (Array.isArray(p.tasks) ? p.tasks : []).map((t) => ({
+      text: `${p.text || 'Pauta'} • ${t.text || 'Tarefa'}`,
+      checked: Boolean(t.checked)
+    }))
+  );
+  const tasksLegacy = Array.isArray(meeting.tasks) ? meeting.tasks : [];
+  const tasks = tasksFromPautas.length ? tasksFromPautas : tasksLegacy;
   const notes = Array.isArray(meeting.notes) ? meeting.notes : [];
   const presentMembers = Array.isArray(meeting.presentMembers) && meeting.presentMembers.length
     ? meeting.presentMembers
@@ -1215,6 +1274,32 @@ function updateAtaDisplay() {
 }
 
 /* ── Pautas rendering ──────────────────────────────────────────────────── */
+function getMeetingParticipantInitials(meeting) {
+  if (!meeting) return [];
+  const base = []
+    .concat(Array.isArray(meeting.members) ? meeting.members : [])
+    .concat(Array.isArray(meeting.presentMembers) ? meeting.presentMembers : [])
+    .filter(Boolean)
+    .map((x) => String(x));
+  return Array.from(new Set(base));
+}
+
+function buildPautaAssigneeOptions(selected) {
+  const participants = getMeetingParticipantInitials(state.currentMeeting);
+  const current = String(selected || getCurrentUserInitials());
+  return participants.map((initials) => {
+    const info = (typeof getUserDisplay === 'function') ? getUserDisplay(initials) : { name: initials };
+    return `<option value="${esc(initials)}" ${initials === current ? 'selected' : ''}>${esc(info.name || initials)}</option>`;
+  }).join('');
+}
+
+function populatePautaAssigneeSelect() {
+  const select = document.getElementById('pautaAssignee');
+  if (!select) return;
+  const options = buildPautaAssigneeOptions(getCurrentUserInitials());
+  select.innerHTML = options || `<option value="${esc(getCurrentUserInitials())}">${esc(getCurrentUserInitials())}</option>`;
+}
+
 function renderPautas() {
   const list = document.getElementById('pautasList');
   let pautas = (state.currentMeeting && state.currentMeeting.pautas) || [];
@@ -1235,6 +1320,8 @@ function renderPautas() {
 
   const currentUserKey = getCurrentUserInitials();
   const canToggle = canManageMeetingItems(state.currentMeeting, state.currentUser);
+  const meetingFinalized = isMeetingFinalized(state.currentMeeting);
+  const canEditMeeting = canCurrentUserEditMeeting(state.currentMeeting) && !meetingFinalized;
 
   list.innerHTML = pautas.map(p => `
     <div class="highlight-card pauta-card-styled" data-pauta-id="${p.id}">
@@ -1246,8 +1333,18 @@ function renderPautas() {
       <div class="hl-checkbox ${p.checked ? 'checked' : ''} ${!canToggle ? 'disabled' : ''}" data-pauta-check="${p.id}"></div>
       <div class="pauta-main">
         <span class="hl-text ${p.checked ? 'checked-text' : ''}">${esc(p.text)}</span>
+        ${canEditMeeting
+          ? `
+            <div class="pauta-assignee-row">
+              <span class="pauta-assignee-label">Responsável</span>
+              <select class="pauta-assignee-select" data-pauta-assignee="${p.id}">
+                ${buildPautaAssigneeOptions(p.assignee || currentUserKey)}
+              </select>
+            </div>
+          `
+          : ''}
         ${p.description ? `<p class="pauta-description-saved">${esc(p.description)}</p>` : ''}
-        ${((p.assignee || 'GM') === currentUserKey)
+        ${((p.assignee || 'GM') === currentUserKey) && !meetingFinalized
           ? `<div class="pauta-desc-actions">
               ${!p.description
                 ? `<button class="pauta-add-desc-btn" data-pauta-add-desc="${p.id}">+ Adicionar descrição</button>`
@@ -1257,11 +1354,58 @@ function renderPautas() {
               <textarea class="pauta-description-input" data-pauta-desc="${p.id}" placeholder="Digite a descrição e pressione Enter">${esc(p.description || '')}</textarea>
             </div>`
           : ''}
+        <div class="pauta-task-block">
+          <div class="pauta-task-title">Tarefas da pauta</div>
+          <div class="pauta-task-list">
+            ${Array.isArray(p.tasks) && p.tasks.length
+              ? p.tasks.map((task) => `
+                <div class="pauta-task-item">
+                  <div class="pauta-task-head">
+                    <span class="pauta-task-name">✔ ${esc(task.text || 'Tarefa')}</span>
+                  ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
+                    ? `<button class="pauta-task-del" data-pauta-task-del="${p.id}" data-task-id="${task.id}" aria-label="Excluir tarefa">Excluir</button>`
+                    : ''}
+                  </div>
+                  <div class="pauta-process-list">
+                    ${Array.isArray(task.processes) && task.processes.length
+                      ? task.processes.map((process) => `
+                        <div class="pauta-process-item">
+                          <span>⚙ ${esc(process.text || 'Processo')}</span>
+                          ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
+                            ? `<button class="pauta-process-del" data-pauta-process-del="${p.id}" data-task-id="${task.id}" data-process-id="${process.id}" aria-label="Excluir processo">Excluir</button>`
+                            : ''}
+                        </div>
+                      `).join('')
+                      : '<div class="pauta-process-empty">Sem processos</div>'}
+                  </div>
+                  ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
+                    ? `
+                      <div class="pauta-process-composer">
+                        <input type="text" class="pauta-process-input" data-new-process="${p.id}" data-task-id="${task.id}" placeholder="Novo processo">
+                        <button class="pauta-inline-add" data-add-process="${p.id}" data-task-id="${task.id}">Adicionar Processo</button>
+                      </div>
+                    `
+                    : ''}
+                </div>
+              `).join('')
+              : '<div class="pauta-task-empty">Nenhuma tarefa na pauta</div>'}
+          </div>
+          ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
+            ? `
+              <div class="pauta-task-add-row">
+                <button class="btn-add-circle pauta-add-task-btn" data-add-task="${p.id}" aria-label="Adicionar tarefa">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                </button>
+              </div>
+              <div class="pauta-task-composer hidden" data-task-composer="${p.id}">
+                <input type="text" class="pauta-task-input" data-new-task="${p.id}" placeholder="Nome da tarefa">
+                <button class="pauta-inline-add" data-confirm-add-task="${p.id}">Adicionar</button>
+              </div>
+            `
+            : ''}
+        </div>
       </div>
       ${(typeof renderUserAvatar === 'function') ? renderUserAvatar(p.assignee || 'GM') : `<span class="hl-avatar">${esc(p.assignee || 'GM')}</span>`}
-      ${((p.assignee || 'GM') === currentUserKey) ? `<button class="hl-delete" data-pauta-del="${p.id}" aria-label="Excluir">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-      </button>` : ''}
     </div>
   `).join('');
 
@@ -1289,9 +1433,23 @@ function renderPautas() {
     });
   });
 
+  list.querySelectorAll('[data-pauta-assignee]').forEach(select => {
+    select.addEventListener('change', async () => {
+      if (meetingFinalized) return;
+      if (!canEditMeeting) return;
+      const id = select.dataset.pautaAssignee;
+      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === id);
+      if (!pauta) return;
+      pauta.assignee = String(select.value || '') || getCurrentUserInitials();
+      persistCurrentMeetingPautas();
+      renderPautas();
+    });
+  });
+
   // Show/hide description editor
   list.querySelectorAll('[data-pauta-add-desc], [data-pauta-edit-desc]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (meetingFinalized) return;
       const id = btn.dataset.pautaAddDesc || btn.dataset.pautaEditDesc;
       const editor = list.querySelector(`[data-pauta-editor="${id}"]`);
       if (editor) {
@@ -1310,6 +1468,10 @@ function renderPautas() {
     textarea.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
+        if (meetingFinalized) {
+          showToast('Reuniões finalizadas não permitem alterar pautas.', 'info');
+          return;
+        }
         const p = pautas.find(x => x.id === id);
         if (!p) return;
         if ((p.assignee || 'GM') !== currentUserKey) {
@@ -1331,23 +1493,119 @@ function renderPautas() {
     });
   });
 
-  list.querySelectorAll('[data-pauta-del]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const id = btn.dataset.pautaDel;
-      const pauta = pautas.find(x => x.id === id);
+  const addTask = (pautaId, rawText) => {
+    if (meetingFinalized) return;
+    const text = String(rawText || '').trim();
+    if (!text) return;
+    const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
+    if (!pauta) return;
+    pauta.tasks = Array.isArray(pauta.tasks) ? pauta.tasks : [];
+    pauta.tasks.push({
+      id: `pt_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text,
+      assignee: pauta.assignee || currentUserKey,
+      processes: [],
+      createdAt: new Date().toISOString()
+    });
+    persistCurrentMeetingPautas();
+    renderPautas();
+  };
+
+  list.querySelectorAll('[data-add-task]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pautaId = btn.dataset.addTask;
+      const composer = list.querySelector(`[data-task-composer="${pautaId}"]`);
+      if (!composer) return;
+      composer.classList.toggle('hidden');
+      if (!composer.classList.contains('hidden')) {
+        const input = composer.querySelector(`[data-new-task="${pautaId}"]`);
+        if (input) input.focus();
+      }
+    });
+  });
+
+  list.querySelectorAll('[data-confirm-add-task]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pautaId = btn.dataset.confirmAddTask;
+      const input = list.querySelector(`[data-new-task="${pautaId}"]`);
+      const text = String((input && input.value) || '').trim();
+      if (!text) return;
+      addTask(pautaId, text);
+    });
+  });
+
+  list.querySelectorAll('[data-new-task]').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      const pautaId = input.dataset.newTask;
+      const text = String(input.value || '').trim();
+      if (!text) return;
+      addTask(pautaId, text);
+    });
+  });
+
+  list.querySelectorAll('[data-pauta-task-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (meetingFinalized) return;
+      const pautaId = btn.dataset.pautaTaskDel;
+      const taskId = btn.dataset.taskId;
+      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
       if (!pauta) return;
-      if ((pauta.assignee || 'GM') !== currentUserKey) {
-        showToast('Você só pode excluir a sua própria pauta', 'info');
-        return;
-      }
-      try {
-        state.currentMeeting.pautas = (state.currentMeeting.pautas || []).filter(x => x.id !== id);
-        persistCurrentMeetingPautas();
-        renderPautas();
-        showToast('Pauta removida', 'success');
-      } catch (e) {
-        showToast('Erro ao remover pauta', 'error');
-      }
+      pauta.tasks = (pauta.tasks || []).filter((t) => t.id !== taskId);
+      persistCurrentMeetingPautas();
+      renderPautas();
+    });
+  });
+
+  const addProcess = (pautaId, taskId, input) => {
+    if (meetingFinalized) return;
+    const text = String((input && input.value) || '').trim();
+    if (!text) return;
+    const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
+    if (!pauta) return;
+    const task = (pauta.tasks || []).find((t) => t.id === taskId);
+    if (!task) return;
+    task.processes = Array.isArray(task.processes) ? task.processes : [];
+    task.processes.push({
+      id: `pp_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      text,
+      createdAt: new Date().toISOString()
+    });
+    persistCurrentMeetingPautas();
+    renderPautas();
+  };
+
+  list.querySelectorAll('[data-add-process]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pautaId = btn.dataset.addProcess;
+      const taskId = btn.dataset.taskId;
+      const input = list.querySelector(`[data-new-process="${pautaId}"][data-task-id="${taskId}"]`);
+      addProcess(pautaId, taskId, input);
+    });
+  });
+
+  list.querySelectorAll('[data-new-process]').forEach(input => {
+    input.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      addProcess(input.dataset.newProcess, input.dataset.taskId, input);
+    });
+  });
+
+  list.querySelectorAll('[data-pauta-process-del]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (meetingFinalized) return;
+      const pautaId = btn.dataset.pautaProcessDel;
+      const taskId = btn.dataset.taskId;
+      const processId = btn.dataset.processId;
+      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
+      if (!pauta) return;
+      const task = (pauta.tasks || []).find((t) => t.id === taskId);
+      if (!task) return;
+      task.processes = (task.processes || []).filter((p) => p.id !== processId);
+      persistCurrentMeetingPautas();
+      renderPautas();
     });
   });
 }

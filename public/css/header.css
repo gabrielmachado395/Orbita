@@ -84,10 +84,10 @@
 .chip-label { color: var(--primary); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
 .chip-value { color: var(--text); font-weight: 500; }
 .chip-remove {
-  color: var(--text-dim); transition: var(--transition);
+  color: #f06974; transition: var(--transition);
   margin-left: 2px;
 }
-.chip-remove:hover { color: var(--destructive); }
+.chip-remove:hover { color: #ff8a95; }
 .chip-chevron { color: var(--text-dim); }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
