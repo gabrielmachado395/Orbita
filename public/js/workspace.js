@@ -3,6 +3,8 @@
 /* ═══════════════════════════════════════════════════════════════════════════ */
 
 const WORKSPACE_STORAGE_KEY = 'plataforma_workspace_v2';
+let workspaceFloatingSelectState = null;
+const workspaceInlineSubmitDebounce = new WeakMap();
 
 function setupWorkspace() {
   ensureWorkspaceState();
@@ -246,6 +248,8 @@ function renderWorkspaceSection(navKey) {
   const contentEl = document.getElementById('workspaceContent');
   if (!titleEl || !subEl || !contentEl) return;
 
+  closeWorkspaceFloatingSelect();
+
   const key = resolveWorkspaceNavKey(navKey);
   const meta = {
     home: { title: 'Home', subtitle: 'Visão geral da Organização e atalhos da Plataforma.' },
@@ -301,8 +305,8 @@ function renderConfiguracoesWorkspace(root) {
                     <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
                   </div>
                   <div class="ws-item-mini-actions">
-                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-sector="${esc(s.id)}">Alterar</button>
-                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-sector="${esc(s.id)}">Excluir</button>
+                    <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-sector="${esc(s.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                    <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-sector="${esc(s.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                   </div>
                 </div>
               `).join('')
@@ -679,8 +683,8 @@ function renderPlanningBuilder(root) {
                   <small>${esc(selectedPlan.descricao || 'Sem descrição')}</small>
                 </div>
                 <div class="ws-item-mini-actions">
-                  <button type="button" class="ws-open-planning ws-open-edit" data-edit-plan="${esc(selectedPlan.id)}">Alterar</button>
-                  <button type="button" class="ws-open-planning ws-open-danger" data-delete-plan="${esc(selectedPlan.id)}">Excluir</button>
+                  <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-plan="${esc(selectedPlan.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                  <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-plan="${esc(selectedPlan.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                 </div>
               </div>
             `
@@ -732,6 +736,8 @@ function renderPlanningBuilder(root) {
       ${renderPlanningTreeAddModal(selectedPlan)}
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderPlanningTree(plan, projects) {
@@ -827,7 +833,28 @@ function renderTreeAddButton(kind, parentId, label) {
 }
 
 function renderTreeRemoveButton(kind, itemId, label) {
-  return `<button type="button" class="ws-tree-remove-btn" data-tree-remove="${esc(kind)}" data-tree-id="${esc(itemId)}" aria-label="${esc(label)}" title="${esc(label)}">-</button>`;
+  return `<button type="button" class="ws-tree-remove-btn" data-tree-remove="${esc(kind)}" data-tree-id="${esc(itemId)}" aria-label="${esc(label)}" title="${esc(label)}">${renderWorkspaceIconTrash()}</button>`;
+}
+
+function renderWorkspaceIconPencil() {
+  return `
+    <svg class="ws-action-icon" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
+    </svg>
+  `.trim();
+}
+
+function renderWorkspaceIconTrash() {
+  return `
+    <svg class="ws-action-icon" aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
+  `.trim();
 }
 
 function renderProjectCards(projects) {
@@ -911,8 +938,8 @@ function renderProjectsWorkspace(root) {
                 </div>
               </div>
               <div class="modal-actions ws-modal-actions">
-                <button type="button" class="btn-cancel" data-close-workspace-modal="project">Cancelar</button>
                 <button type="submit" class="btn-save">Salvar Projeto</button>
+                <button type="button" class="btn-cancel" data-close-workspace-modal="project">Cancelar</button>
               </div>
             </form>
           </div>
@@ -920,6 +947,8 @@ function renderProjectsWorkspace(root) {
       </div>
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderProjectsTree(project) {
@@ -998,8 +1027,8 @@ function renderProjectLinkItem(project, plans, selectedProjectId) {
         <select name="planId">${options}</select>
         <select name="managerIds" multiple size="4">${managerOptions}</select>
         <div class="ws-item-mini-actions">
-          <button type="button" class="ws-open-planning ws-open-edit" data-edit-project="${esc(project.id)}">Alterar</button>
-          <button type="button" class="ws-open-planning ws-open-danger" data-delete-project="${esc(project.id)}">Excluir</button>
+          <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-project="${esc(project.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+          <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-project="${esc(project.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
         </div>
       </form>
     </div>
@@ -1073,8 +1102,8 @@ function renderTasksWorkspace(root) {
                 </div>
               </div>
               <div class="modal-actions ws-modal-actions">
+              <button type="submit" class="btn-save">Salvar Tarefa</button>
                 <button type="button" class="btn-cancel" data-close-workspace-modal="task">Cancelar</button>
-                <button type="submit" class="btn-save">Salvar Tarefa</button>
               </div>
             </form>
           </div>
@@ -1082,6 +1111,8 @@ function renderTasksWorkspace(root) {
       </div>
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderTasksTree(task, projects) {
@@ -1134,8 +1165,8 @@ function renderTaskLinkItem(task, projects, selectedTaskId) {
         <select name="projectId">${options}</select>
         <select name="assigneeId">${userOptions}</select>
         <div class="ws-item-mini-actions">
-          <button type="button" class="ws-open-planning ws-open-edit" data-edit-task="${esc(task.id)}">Alterar</button>
-          <button type="button" class="ws-open-planning ws-open-danger" data-delete-task="${esc(task.id)}">Excluir</button>
+          <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-task="${esc(task.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+          <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-task="${esc(task.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
         </div>
       </form>
     </div>
@@ -1199,8 +1230,8 @@ function renderProcessesWorkspace(root) {
                 </div>
               </div>
               <div class="modal-actions ws-modal-actions">
-                <button type="button" class="btn-cancel" data-close-workspace-modal="process">Cancelar</button>
                 <button type="submit" class="btn-save">Salvar Processo</button>
+                <button type="button" class="btn-cancel" data-close-workspace-modal="process">Cancelar</button>
               </div>
             </form>
           </div>
@@ -1208,6 +1239,8 @@ function renderProcessesWorkspace(root) {
       </div>
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderProcessLinkItem(process, tasks) {
@@ -1228,8 +1261,8 @@ function renderProcessLinkItem(process, tasks) {
         <select name="taskId">${options}</select>
         <select name="assigneeId">${userOptions}</select>
         <div class="ws-item-mini-actions">
-          <button type="button" class="ws-open-planning ws-open-edit" data-edit-process="${esc(process.id)}">Alterar</button>
-          <button type="button" class="ws-open-planning ws-open-danger" data-delete-process="${esc(process.id)}">Excluir</button>
+          <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-process="${esc(process.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+          <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-process="${esc(process.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
         </div>
       </form>
     </div>
@@ -1269,8 +1302,8 @@ function renderIndicadoresWorkspace(root) {
                     <strong>${esc(ind.nome)}</strong><br><small>${setorLabel}${metaLabel}</small>
                   </div>
                   <div class="ws-item-mini-actions">
-                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-indicator="${esc(ind.id)}">Alterar</button>
-                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-indicator="${esc(ind.id)}">Excluir</button>
+                    <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-indicator="${esc(ind.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                    <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-indicator="${esc(ind.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                   </div>
                 </div>
               `;
@@ -1304,8 +1337,8 @@ function renderSetoresWorkspace(root) {
                 <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
               </div>
               <div class="ws-item-mini-actions">
-                <button type="button" class="ws-open-planning ws-open-edit" data-edit-sector="${esc(s.id)}">Alterar</button>
-                <button type="button" class="ws-open-planning ws-open-danger" data-delete-sector="${esc(s.id)}">Excluir</button>
+                <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-sector="${esc(s.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-sector="${esc(s.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
               </div>
             </div>
           `).join('')
@@ -1351,8 +1384,9 @@ function renderMeetingsWorkspace(root) {
                   <div class="ws-item-actions">
                     ${canStart ? `<button type="button" class="ws-open-planning" data-start-meeting="${esc(meeting.id)}">${esc(startLabel)}</button>` : ''}
                     <button type="button" class="ws-open-planning" data-open-meeting-detail="${esc(meeting.id)}">Abrir</button>
-                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-meeting="${esc(meeting.id)}">Alterar</button>
-                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-meeting="${esc(meeting.id)}">Excluir</button>
+                    <span class="ws-actions-divider" aria-hidden="true"></span>
+                    <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-meeting="${esc(meeting.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                    <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-meeting="${esc(meeting.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                   </div>
                 </div>
               `;
@@ -1429,8 +1463,8 @@ function renderMeetingTasksWorkspace(root) {
                   </div>
                   <div class="ws-item-actions-col">
                     <div class="ws-item-mini-actions">
-                      <button type="button" class="ws-open-planning ws-open-edit" data-edit-meeting-task="${esc(task.id)}">Alterar</button>
-                      <button type="button" class="ws-open-planning ws-open-danger" data-delete-meeting-task="${esc(task.id)}">Excluir</button>
+                      <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-meeting-task="${esc(task.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                      <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-meeting-task="${esc(task.id)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                     </div>
                   </div>
                 </div>
@@ -1489,8 +1523,8 @@ function renderMeetingTasksWorkspace(root) {
                 </div>
               </div>
               <div class="modal-actions ws-modal-actions">
+              <button type="submit" class="btn-save">Salvar Tarefa</button>
                 <button type="button" class="btn-cancel" data-close-workspace-modal="meeting-task">Cancelar</button>
-                <button type="submit" class="btn-save">Salvar Tarefa</button>
               </div>
             </form>
           </div>
@@ -1498,6 +1532,8 @@ function renderMeetingTasksWorkspace(root) {
       </div>
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderMeetingOpsWorkspace(navKey, root) {
@@ -1548,8 +1584,8 @@ function renderMeetingOpsWorkspace(navKey, root) {
                     <strong>${esc(item.nome)}</strong><br><small>${esc(item.descricao || 'Sem descrição')}</small>
                   </div>
                   <div class="ws-item-mini-actions">
-                    <button type="button" class="ws-open-planning ws-open-edit" data-edit-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}">Alterar</button>
-                    <button type="button" class="ws-open-planning ws-open-danger" data-delete-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}">Excluir</button>
+                    <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
+                    <button type="button" class="ws-open-planning ws-open-danger ws-open-icon ws-open-ghost" data-delete-ops-item="${esc(item.id)}" data-ops-key="${esc(cfg.key)}" aria-label="Excluir" title="Excluir">${renderWorkspaceIconTrash()}</button>
                   </div>
                 </div>
               `).join('')
@@ -1576,8 +1612,8 @@ function renderMeetingOpsWorkspace(navKey, root) {
                   <input class="ws-modal-title-input" type="text" name="nome" placeholder="${cfg.placeholder}" required>
                   <textarea class="ws-modal-desc-input" name="descricao" placeholder="Descrição"></textarea>
                   <div class="modal-actions ws-modal-actions">
+                  <button type="submit" class="btn-save">Salvar Processo</button>
                     <button type="button" class="btn-cancel" data-close-workspace-modal="meeting-process">Cancelar</button>
-                    <button type="submit" class="btn-save">Salvar Processo</button>
                   </div>
                 </form>
               </div>
@@ -1587,6 +1623,8 @@ function renderMeetingOpsWorkspace(navKey, root) {
         : ''}
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function handleWorkspaceSubmit(e) {
@@ -2022,6 +2060,18 @@ function handleWorkspaceChange(e) {
   if (target instanceof HTMLSelectElement) {
     const inlineForm = target.closest('.ws-inline-form[data-link-type]');
     if (inlineForm && inlineForm instanceof HTMLFormElement) {
+      if (target.multiple && target.name === 'managerIds') {
+        const existing = workspaceInlineSubmitDebounce.get(inlineForm);
+        if (existing) clearTimeout(existing);
+        const timerId = setTimeout(() => {
+          workspaceInlineSubmitDebounce.delete(inlineForm);
+          if (!document.body.contains(inlineForm)) return;
+          inlineForm.requestSubmit();
+        }, 450);
+        workspaceInlineSubmitDebounce.set(inlineForm, timerId);
+        return;
+      }
+
       inlineForm.requestSubmit();
       return;
     }
@@ -2476,6 +2526,239 @@ function isNodeOpen(nodeId) {
   return state.workspaceUI.expandedNodes[nodeId] !== false;
 }
 
+function getWorkspaceSelectLabel(select) {
+  if (!(select instanceof HTMLSelectElement)) return 'Selecione...';
+
+  if (select.multiple) {
+    const selected = Array.from(select.selectedOptions || [])
+      .map((opt) => String(opt.textContent || opt.label || '').trim())
+      .filter(Boolean);
+    if (!selected.length) return 'Selecione...';
+    if (selected.length <= 2) return selected.join(', ');
+    return `${selected.length} selecionados`;
+  }
+
+  const selectedOption = select.options[select.selectedIndex];
+  if (!selectedOption) return 'Selecione...';
+  const text = String(selectedOption.textContent || selectedOption.label || '').trim();
+  return text || 'Selecione...';
+}
+
+function closeWorkspaceFloatingSelect() {
+  const stateRef = workspaceFloatingSelectState;
+  if (!stateRef) return;
+
+  if (stateRef.wrapper) stateRef.wrapper.classList.remove('is-open');
+  if (stateRef.panel && stateRef.panel.parentNode) stateRef.panel.parentNode.removeChild(stateRef.panel);
+  if (stateRef.onDocumentPointerDown) document.removeEventListener('mousedown', stateRef.onDocumentPointerDown, true);
+  if (stateRef.onWindowResize) window.removeEventListener('resize', stateRef.onWindowResize, true);
+  if (stateRef.onWindowScroll) window.removeEventListener('scroll', stateRef.onWindowScroll, true);
+
+  workspaceFloatingSelectState = null;
+}
+
+function positionWorkspaceFloatingSelect() {
+  const stateRef = workspaceFloatingSelectState;
+  if (!stateRef || !stateRef.wrapper || !stateRef.panel) return;
+
+  const trigger = stateRef.wrapper.querySelector('.select-trigger');
+  if (!(trigger instanceof HTMLElement)) return;
+
+  const rect = trigger.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const width = Math.min(Math.max(rect.width, 220), Math.max(220, viewportWidth - 16));
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const panelHeight = Math.min(280, Math.max(220, viewportHeight - rect.bottom - 20));
+  let top = rect.bottom + 8;
+  let left = rect.left;
+
+  if (rect.bottom + panelHeight + 16 > viewportHeight && rect.top > panelHeight + 16) {
+    top = Math.max(8, rect.top - panelHeight - 8);
+  }
+
+  if (left + width + 8 > viewportWidth) {
+    left = Math.max(8, viewportWidth - width - 8);
+  }
+
+  stateRef.panel.style.left = `${Math.max(8, left)}px`;
+  stateRef.panel.style.top = `${Math.max(8, top)}px`;
+  stateRef.panel.style.width = `${width}px`;
+}
+
+function renderWorkspaceFloatingSelectOptions(panel, select, filterText = '') {
+  if (!(panel instanceof HTMLElement) || !(select instanceof HTMLSelectElement)) return;
+  const optionsList = panel.querySelector('.select-options-list');
+  if (!(optionsList instanceof HTMLElement)) return;
+
+  const term = String(filterText || '').trim().toLowerCase();
+  const options = Array.from(select.options || []).filter((opt) => !opt.disabled);
+  const visible = options.filter((opt) => !term || String(opt.textContent || '').toLowerCase().includes(term));
+
+  if (!visible.length) {
+    optionsList.innerHTML = '<p class="select-empty">Nenhuma opção encontrada</p>';
+    return;
+  }
+
+  optionsList.innerHTML = visible.map((opt) => {
+    const value = String(opt.value || '');
+    const selected = select.multiple
+      ? (opt.selected ? 'selected' : '')
+      : (String(select.value || '') === value ? 'selected' : '');
+    return `<button type="button" class="select-option ${selected}" data-ws-option-value="${esc(value)}">${esc(String(opt.textContent || '').trim())}</button>`;
+  }).join('');
+
+  optionsList.querySelectorAll('[data-ws-option-value]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextValue = String(btn.dataset.wsOptionValue || '');
+
+      const option = Array.from(select.options || []).find((opt) => String(opt.value || '') === nextValue);
+      if (!option) return;
+
+      if (select.multiple) {
+        const maxSelected = (select.name === 'managerIds') ? 2 : null;
+
+        if (!option.selected) {
+          const selectedCount = Array.from(select.selectedOptions || [])
+            .map((opt) => String(opt.value || ''))
+            .filter(Boolean)
+            .length;
+          if (maxSelected && selectedCount >= maxSelected) {
+            showToast('Projeto permite no máximo 2 gestores.', 'info');
+            return;
+          }
+        }
+
+        option.selected = !option.selected;
+        syncWorkspaceEnhancedSelect(select);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+
+        const searchInput = panel.querySelector('.search-input');
+        renderWorkspaceFloatingSelectOptions(
+          panel,
+          select,
+          searchInput instanceof HTMLInputElement ? searchInput.value : filterText,
+        );
+        return;
+      }
+
+      select.value = nextValue;
+      syncWorkspaceEnhancedSelect(select);
+      select.dispatchEvent(new Event('change', { bubbles: true }));
+      closeWorkspaceFloatingSelect();
+    });
+  });
+}
+
+function openWorkspaceFloatingSelect(wrapper, select) {
+  if (!(wrapper instanceof HTMLElement) || !(select instanceof HTMLSelectElement)) return;
+
+  if (workspaceFloatingSelectState && workspaceFloatingSelectState.select === select) {
+    closeWorkspaceFloatingSelect();
+    return;
+  }
+
+  closeWorkspaceFloatingSelect();
+
+  const panel = document.createElement('div');
+  panel.className = 'select-dropdown ws-floating-select-dropdown open';
+  panel.innerHTML = `
+    <div class="search-field">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input class="search-input" type="text" placeholder="Buscar...">
+    </div>
+    <div class="select-options-list"></div>
+  `;
+  document.body.appendChild(panel);
+
+  const onWindowResize = () => positionWorkspaceFloatingSelect();
+  const onWindowScroll = () => positionWorkspaceFloatingSelect();
+  const onDocumentPointerDown = (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (panel.contains(target) || wrapper.contains(target)) return;
+    closeWorkspaceFloatingSelect();
+  };
+
+  workspaceFloatingSelectState = { wrapper, select, panel, onWindowResize, onWindowScroll, onDocumentPointerDown };
+  wrapper.classList.add('is-open');
+  positionWorkspaceFloatingSelect();
+  renderWorkspaceFloatingSelectOptions(panel, select);
+
+  const searchInput = panel.querySelector('.search-input');
+  if (searchInput instanceof HTMLInputElement) {
+    searchInput.addEventListener('input', () => {
+      renderWorkspaceFloatingSelectOptions(panel, select, searchInput.value);
+    });
+    setTimeout(() => searchInput.focus(), 0);
+  }
+
+  window.addEventListener('resize', onWindowResize, true);
+  window.addEventListener('scroll', onWindowScroll, true);
+  setTimeout(() => document.addEventListener('mousedown', onDocumentPointerDown, true), 0);
+}
+
+function syncWorkspaceEnhancedSelect(select) {
+  if (!(select instanceof HTMLSelectElement)) return;
+  const wrapper = select.closest('.ws-searchable-select');
+  if (!(wrapper instanceof HTMLElement)) return;
+  const triggerText = wrapper.querySelector('.select-trigger span');
+  if (triggerText) triggerText.textContent = getWorkspaceSelectLabel(select);
+}
+
+function setupWorkspaceEnhancedSelects(root) {
+  if (!(root instanceof HTMLElement)) return;
+
+  root.querySelectorAll(
+    [
+      '.ws-form select:not([multiple])',
+      '.ws-inline-form select:not([multiple])',
+      '.ws-form select[multiple][name="managerIds"]',
+      '.ws-inline-form select[multiple][name="managerIds"]',
+    ].join(', '),
+  ).forEach((selectEl) => {
+    if (!(selectEl instanceof HTMLSelectElement)) return;
+    if (selectEl.dataset.wsEnhanced === '1') {
+      syncWorkspaceEnhancedSelect(selectEl);
+      return;
+    }
+
+    selectEl.dataset.wsEnhanced = '1';
+    selectEl.classList.add('ws-native-select-hidden');
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'custom-select ws-searchable-select';
+    selectEl.parentNode.insertBefore(wrapper, selectEl);
+    wrapper.appendChild(selectEl);
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'select-trigger';
+    trigger.innerHTML = `
+      <span>${esc(getWorkspaceSelectLabel(selectEl))}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+    `;
+    wrapper.appendChild(trigger);
+
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      openWorkspaceFloatingSelect(wrapper, selectEl);
+    });
+
+    selectEl.addEventListener('change', () => syncWorkspaceEnhancedSelect(selectEl));
+    syncWorkspaceEnhancedSelect(selectEl);
+  });
+}
+
+function refreshWorkspaceEnhancedSelects(scope) {
+  if (!(scope instanceof HTMLElement) && !(scope instanceof Document)) return;
+  scope.querySelectorAll('select[data-ws-enhanced="1"]').forEach((selectEl) => {
+    if (selectEl instanceof HTMLSelectElement) {
+      syncWorkspaceEnhancedSelect(selectEl);
+    }
+  });
+}
+
 function openWorkspaceModal(kind) {
   const id = getWorkspaceModalOverlayId(kind);
   if (!id) return;
@@ -2555,6 +2838,7 @@ function resetWorkspaceModal(kind) {
     form.reset();
     const multi = form.querySelector('select[name="managerIds"][multiple]');
     if (multi) Array.from(multi.options || []).forEach((opt) => { opt.selected = false; });
+    refreshWorkspaceEnhancedSelects(form);
   }
 
   const overlayId = getWorkspaceModalOverlayId(kind);
@@ -2651,6 +2935,8 @@ function openWorkspaceModalForEdit(kind, item) {
     form.descricao.value = String(item.descricao || '');
   }
 
+  refreshWorkspaceEnhancedSelects(form);
+
   openWorkspaceModal(kind);
   const firstInput = form.querySelector('input, textarea, select');
   if (firstInput && typeof firstInput.focus === 'function') {
@@ -2677,6 +2963,7 @@ function getWorkspaceModalOverlayId(kind) {
 }
 
 function closeWorkspaceModal(kind) {
+  closeWorkspaceFloatingSelect();
   const id = getWorkspaceModalOverlayId(kind);
   if (!id) return;
   const overlay = document.getElementById(id);
