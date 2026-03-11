@@ -25,6 +25,7 @@ function ensureWorkspaceState() {
   if (!state.workspaceUI) state.workspaceUI = {};
   if (!state.workspaceUI.expandedNodes) state.workspaceUI.expandedNodes = {};
   if (!state.workspaceUI.dragProjectId) state.workspaceUI.dragProjectId = '';
+  if (!state.workspaceUI.modalEdit) state.workspaceUI.modalEdit = { kind: '', id: '' };
 }
 
 function loadWorkspaceData() {
@@ -1595,6 +1596,7 @@ function handleWorkspaceSubmit(e) {
   ensureWorkspaceState();
 
   if (form.id === 'wsStrategicPlanForm') {
+    const editId = String(form.dataset.editId || '');
     const anoRaw = String(form.ano.value || '').trim();
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
@@ -1602,6 +1604,20 @@ function handleWorkspaceSubmit(e) {
       showToast('Preencha o campo de ano/ciclo (máximo 20 caracteres).', 'info');
       return;
     }
+
+    if (editId) {
+      const plan = (state.workspaceData.planejamentos || []).find((p) => String(p.id) === editId) || (state.workspaceData.planejamentos || [])[0];
+      if (!plan) return;
+      plan.ano = anoRaw;
+      plan.nome = nome;
+      plan.descricao = descricao;
+      saveWorkspaceData();
+      closeWorkspaceModal('plan');
+      renderWorkspaceSection('planejamento');
+      showToast('Plano alterado.', 'success');
+      return;
+    }
+
     if ((state.workspaceData.planejamentos || []).length) {
       showToast('Já existe um plano raiz. Use Alterar para editar o plano atual.', 'info');
       return;
@@ -1727,6 +1743,7 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsProjectForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
     const planId = String(form.planId.value || '') || null;
@@ -1734,6 +1751,20 @@ function handleWorkspaceSubmit(e) {
     if (!nome) return;
     if (Array.from(form.querySelectorAll('select[name="managerIds"] option:checked')).length > 2) {
       showToast('Projeto permite no máximo 2 gestores.', 'info');
+      return;
+    }
+
+    if (editId) {
+      const project = (state.workspaceData.projetos || []).find((p) => String(p.id) === editId);
+      if (!project) return;
+      project.nome = nome;
+      project.descricao = descricao;
+      project.managerIds = managerIds;
+      updateProjectPlanLink(project.id, planId);
+      saveWorkspaceData();
+      closeWorkspaceModal('project');
+      renderWorkspaceSection('projetos');
+      showToast('Projeto alterado.', 'success');
       return;
     }
 
@@ -1756,11 +1787,26 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsTaskForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
     const projectId = String(form.projectId.value || '') || null;
     const assigneeId = String(form.assigneeId.value || '') || null;
     if (!nome) return;
+
+    if (editId) {
+      const task = (state.workspaceData.tarefas || []).find((t) => String(t.id) === editId);
+      if (!task) return;
+      task.nome = nome;
+      task.descricao = descricao;
+      task.projectId = projectId;
+      task.assigneeId = assigneeId;
+      saveWorkspaceData();
+      closeWorkspaceModal('task');
+      renderWorkspaceSection('tarefas');
+      showToast('Tarefa alterada.', 'success');
+      return;
+    }
 
     state.workspaceData.tarefas.push({ id: mkId('task'), nome, descricao, projectId, assigneeId });
     saveWorkspaceData();
@@ -1771,11 +1817,27 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsMeetingTaskForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
     const meetingId = String(form.meetingId.value || '') || null;
     const assigneeId = String(form.assigneeId.value || '') || null;
     if (!nome) return;
+
+    if (editId) {
+      const item = (state.workspaceData.reunioesTarefas || []).find((t) => String(t.id) === editId);
+      if (!item) return;
+      item.nome = nome;
+      item.descricao = descricao;
+      item.meetingId = meetingId;
+      item.assigneeId = assigneeId;
+      saveWorkspaceData();
+      closeWorkspaceModal('meeting-task');
+      renderWorkspaceSection('tarefas-reunioes');
+      showToast('Tarefa de reunião alterada.', 'success');
+      return;
+    }
+
     state.workspaceData.reunioesTarefas.push({
       id: mkId('mtt'),
       nome,
@@ -1791,11 +1853,26 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsProcessForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
     const taskId = String(form.taskId.value || '') || null;
     const assigneeId = String(form.assigneeId.value || '') || null;
     if (!nome) return;
+
+    if (editId) {
+      const process = (state.workspaceData.processos || []).find((p) => String(p.id) === editId);
+      if (!process) return;
+      process.nome = nome;
+      process.descricao = descricao;
+      process.taskId = taskId;
+      process.assigneeId = assigneeId;
+      saveWorkspaceData();
+      closeWorkspaceModal('process');
+      renderWorkspaceSection('processos');
+      showToast('Processo alterado.', 'success');
+      return;
+    }
 
     state.workspaceData.processos.push({ id: mkId('proc'), nome, descricao, taskId, assigneeId });
     saveWorkspaceData();
@@ -1806,9 +1883,24 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsMeetingProcessForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
     const descricao = String(form.descricao.value || '').trim();
     if (!nome) return;
+
+    if (editId) {
+      state.workspaceData.reunioesProcessos = Array.isArray(state.workspaceData.reunioesProcessos) ? state.workspaceData.reunioesProcessos : [];
+      const item = (state.workspaceData.reunioesProcessos || []).find((x) => String(x.id) === editId);
+      if (!item) return;
+      item.nome = nome;
+      item.descricao = descricao;
+      saveWorkspaceData();
+      closeWorkspaceModal('meeting-process');
+      renderWorkspaceSection('processos-reunioes');
+      showToast('Processo de reunião alterado.', 'success');
+      return;
+    }
+
     state.workspaceData.reunioesProcessos = Array.isArray(state.workspaceData.reunioesProcessos) ? state.workspaceData.reunioesProcessos : [];
     state.workspaceData.reunioesProcessos.push({ id: mkId('ops'), nome, descricao });
     saveWorkspaceData();
@@ -2008,7 +2100,7 @@ function handleWorkspaceClick(e) {
 
   const openModalBtn = e.target.closest('[data-open-workspace-modal]');
   if (openModalBtn) {
-    openWorkspaceModal(String(openModalBtn.dataset.openWorkspaceModal || ''));
+    openWorkspaceModalForCreate(String(openModalBtn.dataset.openWorkspaceModal || ''));
     return;
   }
 
@@ -2122,18 +2214,7 @@ function handleWorkspaceClick(e) {
     const planId = String(editPlanBtn.dataset.editPlan || '');
     const plan = (state.workspaceData.planejamentos || []).find((p) => String(p.id) === planId);
     if (!plan) return;
-    const anoRaw = promptRequiredValue('Alterar plano - ano/ciclo:', plan.ano, { maxLen: 20 });
-    if (anoRaw === null || anoRaw === '__INVALID__') return;
-    const nome = promptRequiredValue('Alterar plano - nome:', plan.nome || '', { maxLen: 120 });
-    if (nome === null || nome === '__INVALID__') return;
-    const descricao = promptOptionalValue('Alterar plano - descrição:', plan.descricao || '');
-    if (descricao === null) return;
-    plan.ano = anoRaw;
-    plan.nome = nome;
-    plan.descricao = descricao;
-    saveWorkspaceData();
-    renderWorkspaceSection('planejamento');
-    showToast('Plano alterado.', 'success');
+    openWorkspaceModalForEdit('plan', plan);
     return;
   }
 
@@ -2160,7 +2241,10 @@ function handleWorkspaceClick(e) {
 
   const editProjectBtn = e.target.closest('[data-edit-project]');
   if (editProjectBtn) {
-    editSimpleWorkspaceItem('projetos', String(editProjectBtn.dataset.editProject || ''), 'projetos', 'Projeto');
+    const projectId = String(editProjectBtn.dataset.editProject || '');
+    const project = (state.workspaceData.projetos || []).find((p) => String(p.id) === projectId);
+    if (!project) return;
+    openWorkspaceModalForEdit('project', project);
     return;
   }
 
@@ -2185,7 +2269,10 @@ function handleWorkspaceClick(e) {
 
   const editTaskBtn = e.target.closest('[data-edit-task]');
   if (editTaskBtn) {
-    editSimpleWorkspaceItem('tarefas', String(editTaskBtn.dataset.editTask || ''), 'tarefas', 'Tarefa');
+    const taskId = String(editTaskBtn.dataset.editTask || '');
+    const task = (state.workspaceData.tarefas || []).find((t) => String(t.id) === taskId);
+    if (!task) return;
+    openWorkspaceModalForEdit('task', task);
     return;
   }
 
@@ -2206,7 +2293,10 @@ function handleWorkspaceClick(e) {
 
   const editProcessBtn = e.target.closest('[data-edit-process]');
   if (editProcessBtn) {
-    editSimpleWorkspaceItem('processos', String(editProcessBtn.dataset.editProcess || ''), 'processos', 'Processo');
+    const processId = String(editProcessBtn.dataset.editProcess || '');
+    const process = (state.workspaceData.processos || []).find((p) => String(p.id) === processId);
+    if (!process) return;
+    openWorkspaceModalForEdit('process', process);
     return;
   }
 
@@ -2218,7 +2308,10 @@ function handleWorkspaceClick(e) {
 
   const editMeetingTaskBtn = e.target.closest('[data-edit-meeting-task]');
   if (editMeetingTaskBtn) {
-    editSimpleWorkspaceItem('reunioesTarefas', String(editMeetingTaskBtn.dataset.editMeetingTask || ''), 'tarefas-reunioes', 'Tarefa de reunião');
+    const meetingTaskId = String(editMeetingTaskBtn.dataset.editMeetingTask || '');
+    const item = (state.workspaceData.reunioesTarefas || []).find((t) => String(t.id) === meetingTaskId);
+    if (!item) return;
+    openWorkspaceModalForEdit('meeting-task', item);
     return;
   }
 
@@ -2236,6 +2329,12 @@ function handleWorkspaceClick(e) {
     const opsKey = String(editOpsItemBtn.dataset.opsKey || '');
     if (!opsKey) return;
     const navKey = state.activeNav || (opsKey === 'reunioesProcessos' ? 'processos-reunioes' : opsKey);
+    if (opsKey === 'reunioesProcessos') {
+      const item = (state.workspaceData.reunioesProcessos || []).find((x) => String(x.id) === itemId);
+      if (!item) return;
+      openWorkspaceModalForEdit('meeting-process', item);
+      return;
+    }
     editSimpleWorkspaceItem(opsKey, itemId, navKey, 'Item');
     return;
   }
@@ -2378,29 +2477,189 @@ function isNodeOpen(nodeId) {
 }
 
 function openWorkspaceModal(kind) {
-  const id = kind === 'plan'
-    ? 'wsPlanModalOverlay'
-    : kind === 'tree-add'
-      ? 'wsTreeAddModalOverlay'
-    : kind === 'project'
-    ? 'wsProjectModalOverlay'
-    : kind === 'task'
-      ? 'wsTaskModalOverlay'
-      : kind === 'meeting-task'
-        ? 'wsMeetingTaskModalOverlay'
-        : kind === 'process'
-          ? 'wsProcessModalOverlay'
-          : kind === 'meeting-process'
-            ? 'wsMeetingProcessModalOverlay'
-        : '';
+  const id = getWorkspaceModalOverlayId(kind);
   if (!id) return;
   const overlay = document.getElementById(id);
   if (!overlay) return;
   overlay.classList.add('open');
 }
 
-function closeWorkspaceModal(kind) {
-  const id = kind === 'plan'
+function getWorkspaceModalFormId(kind) {
+  return kind === 'plan'
+    ? 'wsStrategicPlanForm'
+    : kind === 'project'
+      ? 'wsProjectForm'
+      : kind === 'task'
+        ? 'wsTaskForm'
+        : kind === 'process'
+          ? 'wsProcessForm'
+          : kind === 'meeting-task'
+            ? 'wsMeetingTaskForm'
+            : kind === 'meeting-process'
+              ? 'wsMeetingProcessForm'
+              : '';
+}
+
+function getWorkspaceModalCopy(kind, mode) {
+  const isEdit = mode === 'edit';
+  if (kind === 'plan') {
+    return {
+      label: isEdit ? 'ALTERAR PLANEJAMENTO' : 'NOVO PLANEJAMENTO',
+      title: isEdit ? 'Alterar Planejamento' : 'Novo Planejamento',
+      submit: isEdit ? 'Salvar alterações' : 'Criar Plano',
+    };
+  }
+  if (kind === 'project') {
+    return {
+      label: isEdit ? 'ALTERAR PROJETO' : 'NOVO PROJETO',
+      title: isEdit ? 'Alterar Projeto' : 'Novo Projeto',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Projeto',
+    };
+  }
+  if (kind === 'task') {
+    return {
+      label: isEdit ? 'ALTERAR TAREFA' : 'NOVA TAREFA',
+      title: isEdit ? 'Alterar Tarefa' : 'Nova Tarefa',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Tarefa',
+    };
+  }
+  if (kind === 'process') {
+    return {
+      label: isEdit ? 'ALTERAR PROCESSO' : 'NOVO PROCESSO',
+      title: isEdit ? 'Alterar Processo' : 'Novo Processo',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Processo',
+    };
+  }
+  if (kind === 'meeting-task') {
+    return {
+      label: isEdit ? 'ALTERAR TAREFA DE REUNIÃO' : 'TAREFA DE REUNIÃO',
+      title: isEdit ? 'Alterar Tarefa de Reunião' : 'Nova Tarefa de Reunião',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Tarefa',
+    };
+  }
+  if (kind === 'meeting-process') {
+    return {
+      label: isEdit ? 'ALTERAR PROCESSO DE REUNIÃO' : 'PROCESSO DE REUNIÃO',
+      title: isEdit ? 'Alterar Processo de Reunião' : 'Novo Processo de Reunião',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Processo',
+    };
+  }
+  return { label: '', title: '', submit: '' };
+}
+
+function resetWorkspaceModal(kind) {
+  const formId = getWorkspaceModalFormId(kind);
+  const form = formId ? document.getElementById(formId) : null;
+  if (form) {
+    delete form.dataset.editId;
+    form.reset();
+    const multi = form.querySelector('select[name="managerIds"][multiple]');
+    if (multi) Array.from(multi.options || []).forEach((opt) => { opt.selected = false; });
+  }
+
+  const overlayId = getWorkspaceModalOverlayId(kind);
+  const overlay = overlayId ? document.getElementById(overlayId) : null;
+  if (!overlay) return;
+
+  const copy = getWorkspaceModalCopy(kind, 'create');
+  const labelEl = overlay.querySelector('.ws-modal-recurrence .recurrence-label');
+  const titleEl = overlay.querySelector('.ws-modal-header h3');
+  const submitEl = overlay.querySelector('button[type="submit"].btn-save');
+  if (labelEl && copy.label) labelEl.textContent = copy.label;
+  if (titleEl && copy.title) titleEl.textContent = copy.title;
+  if (submitEl && copy.submit) submitEl.textContent = copy.submit;
+
+  if (state.workspaceUI && state.workspaceUI.modalEdit && String(state.workspaceUI.modalEdit.kind || '') === String(kind)) {
+    state.workspaceUI.modalEdit = { kind: '', id: '' };
+  }
+}
+
+function applyWorkspaceModalCopy(kind, mode) {
+  const overlayId = getWorkspaceModalOverlayId(kind);
+  const overlay = overlayId ? document.getElementById(overlayId) : null;
+  if (!overlay) return;
+  const copy = getWorkspaceModalCopy(kind, mode);
+  const labelEl = overlay.querySelector('.ws-modal-recurrence .recurrence-label');
+  const titleEl = overlay.querySelector('.ws-modal-header h3');
+  const submitEl = overlay.querySelector('button[type="submit"].btn-save');
+  if (labelEl && copy.label) labelEl.textContent = copy.label;
+  if (titleEl && copy.title) titleEl.textContent = copy.title;
+  if (submitEl && copy.submit) submitEl.textContent = copy.submit;
+}
+
+function openWorkspaceModalForCreate(kind) {
+  ensureWorkspaceState();
+  if (getWorkspaceModalFormId(kind)) {
+    resetWorkspaceModal(kind);
+  }
+  openWorkspaceModal(kind);
+}
+
+function openWorkspaceModalForEdit(kind, item) {
+  ensureWorkspaceState();
+  if (!item || !getWorkspaceModalFormId(kind)) return;
+  resetWorkspaceModal(kind);
+
+  const formId = getWorkspaceModalFormId(kind);
+  const form = formId ? document.getElementById(formId) : null;
+  if (!form) return;
+
+  form.dataset.editId = String(item.id || '');
+  state.workspaceUI.modalEdit = { kind: String(kind || ''), id: String(item.id || '') };
+  applyWorkspaceModalCopy(kind, 'edit');
+
+  if (kind === 'plan') {
+    form.ano.value = String(item.ano || '');
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+  }
+
+  if (kind === 'project') {
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+    form.planId.value = String(item.planId || '');
+    const multi = form.querySelector('select[name="managerIds"][multiple]');
+    if (multi) {
+      const ids = Array.isArray(item.managerIds) ? item.managerIds.map(String) : [];
+      Array.from(multi.options || []).forEach((opt) => { opt.selected = ids.includes(String(opt.value || '')); });
+    }
+  }
+
+  if (kind === 'task') {
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+    form.projectId.value = String(item.projectId || '');
+    form.assigneeId.value = String(item.assigneeId || '');
+  }
+
+  if (kind === 'process') {
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+    form.taskId.value = String(item.taskId || '');
+    form.assigneeId.value = String(item.assigneeId || '');
+  }
+
+  if (kind === 'meeting-task') {
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+    form.meetingId.value = String(item.meetingId || '');
+    form.assigneeId.value = String(item.assigneeId || '');
+  }
+
+  if (kind === 'meeting-process') {
+    form.nome.value = String(item.nome || '');
+    form.descricao.value = String(item.descricao || '');
+  }
+
+  openWorkspaceModal(kind);
+  const firstInput = form.querySelector('input, textarea, select');
+  if (firstInput && typeof firstInput.focus === 'function') {
+    setTimeout(() => firstInput.focus(), 0);
+  }
+}
+
+function getWorkspaceModalOverlayId(kind) {
+  return kind === 'plan'
     ? 'wsPlanModalOverlay'
     : kind === 'tree-add'
       ? 'wsTreeAddModalOverlay'
@@ -2415,9 +2674,14 @@ function closeWorkspaceModal(kind) {
           : kind === 'meeting-process'
             ? 'wsMeetingProcessModalOverlay'
         : '';
+}
+
+function closeWorkspaceModal(kind) {
+  const id = getWorkspaceModalOverlayId(kind);
   if (!id) return;
   const overlay = document.getElementById(id);
   if (!overlay) return;
   overlay.classList.remove('open');
   if (kind === 'tree-add') clearTreeAddState();
+  if (getWorkspaceModalFormId(kind)) resetWorkspaceModal(kind);
 }
