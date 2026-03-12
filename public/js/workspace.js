@@ -283,17 +283,17 @@ function renderWorkspaceSection(navKey) {
 
 function renderConfiguracoesWorkspace(root) {
   const setores = state.workspaceData.setores || [];
+  const users = getAssignableUsers();
+  const userOptions = users
+    .map((u) => `<option value="${esc(u.id)}">${esc(u.name)}${u.email ? ` • ${esc(u.email)}` : ''}</option>`)
+    .join('');
   root.innerHTML = `
     <section class="ws-dual-layout">
       <div class="ws-dual-left">
         <article class="ws-card ws-focus">
           <h3>Setores</h3>
-          <form class="ws-form" id="wsSectorForm">
-            <input type="text" name="nome" placeholder="Nome do setor" required>
-            <input type="text" name="responsavel" placeholder="Responsável" required>
-            <input type="text" name="meta" placeholder="Meta principal do setor">
-            <button type="submit">Salvar Setor</button>
-          </form>
+          <p>Cadastre setores em um popup, como nas outras telas do Workspace.</p>
+          <button type="button" class="ws-open-planning" data-open-workspace-modal="sector">Novo Setor</button>
         </article>
         <article class="ws-card">
           <h3>Setores cadastrados</h3>
@@ -302,7 +302,7 @@ function renderConfiguracoesWorkspace(root) {
               ? setores.map((s) => `
                 <div class="ws-item ws-item-entity">
                   <div>
-                    <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavel)}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
+                    <strong>${esc(s.nome)}</strong><br><small>Resp.: ${esc(s.responsavelId ? userNameById(s.responsavelId) : (s.responsavel ? userNameById(s.responsavel) : 'Sem responsável'))}${s.meta ? ` | Meta: ${esc(s.meta)}` : ''}</small>
                   </div>
                   <div class="ws-item-mini-actions">
                     <button type="button" class="ws-open-planning ws-open-edit ws-open-icon ws-open-ghost" data-edit-sector="${esc(s.id)}" aria-label="Alterar" title="Alterar">${renderWorkspaceIconPencil()}</button>
@@ -314,8 +314,47 @@ function renderConfiguracoesWorkspace(root) {
           </div>
         </article>
       </div>
+
+      <div class="modal-overlay" id="wsSectorModalOverlay">
+        <div class="modal-create ws-modal-create ws-modal-like-meeting">
+          <div class="modal-recurrence ws-modal-recurrence">
+            <span class="recurrence-label">NOVO SETOR</span>
+            <div class="recurrence-options">
+              <button type="button" class="rec-btn active">WORKSPACE</button>
+            </div>
+          </div>
+          <div class="modal-body ws-modal-body">
+            <div class="ws-modal-header">
+              <h3>Novo Setor</h3>
+              <button type="button" class="ws-modal-close" data-close-workspace-modal="sector" aria-label="Fechar">×</button>
+            </div>
+            <form class="ws-form ws-modal-form" id="wsSectorForm">
+              <input class="ws-modal-title-input" type="text" name="nome" placeholder="Nome do setor" required>
+              <div class="ws-modal-form-grid">
+                <div>
+                  <label class="ws-label">Responsável</label>
+                  <select name="responsavelId">
+                    <option value="">Sem responsável</option>
+                    ${userOptions}
+                  </select>
+                </div>
+                <div>
+                  <label class="ws-label">Meta</label>
+                  <input type="text" name="meta" placeholder="Meta principal do setor">
+                </div>
+              </div>
+              <div class="modal-actions ws-modal-actions">
+                <button type="submit" class="btn-save">Salvar Setor</button>
+                <button type="button" class="btn-cancel" data-close-workspace-modal="sector">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
   `;
+
+  setupWorkspaceEnhancedSelects(root);
 }
 
 function renderHomeWorkspace(root) {
@@ -511,8 +550,8 @@ function renderPlanningTreeAddModal(plan) {
               <label class="ws-label">Responsável(is) (máx. 2)</label>
               <select name="managerIds" multiple size="4">${userOptions}</select>
               <div class="modal-actions ws-modal-actions">
+              <button type="submit" class="btn-save">Criar Projeto</button>
                 <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
-                <button type="submit" class="btn-save">Criar Projeto</button>
               </div>
             </form>
           </div>
@@ -546,8 +585,8 @@ function renderPlanningTreeAddModal(plan) {
                 ${userOptions}
               </select>
               <div class="modal-actions ws-modal-actions">
+              <button type="submit" class="btn-save">Criar Tarefa</button>
                 <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
-                <button type="submit" class="btn-save">Criar Tarefa</button>
               </div>
             </form>
           </div>
@@ -580,8 +619,8 @@ function renderPlanningTreeAddModal(plan) {
               ${userOptions}
             </select>
             <div class="modal-actions ws-modal-actions">
+            <button type="submit" class="btn-save">Criar Processo</button>
               <button type="button" class="btn-cancel" data-close-workspace-modal="tree-add">Cancelar</button>
-              <button type="submit" class="btn-save">Criar Processo</button>
             </div>
           </form>
         </div>
@@ -726,8 +765,8 @@ function renderPlanningBuilder(root) {
               </div>
               <textarea class="ws-modal-desc-input" name="descricao" placeholder="Diretriz estratégica"></textarea>
               <div class="modal-actions ws-modal-actions">
+              <button type="submit" class="btn-save">Criar Plano</button>
                 <button type="button" class="btn-cancel" data-close-workspace-modal="plan">Cancelar</button>
-                <button type="submit" class="btn-save">Criar Plano</button>
               </div>
             </form>
           </div>
@@ -1994,12 +2033,33 @@ function handleWorkspaceSubmit(e) {
   }
 
   if (form.id === 'wsSectorForm') {
+    const editId = String(form.dataset.editId || '');
     const nome = String(form.nome.value || '').trim();
-    const responsavel = String(form.responsavel.value || '').trim();
+    const responsavelId = String(form.responsavelId.value || '').trim() || null;
     const meta = String(form.meta.value || '').trim();
-    if (!nome || !responsavel) return;
-    state.workspaceData.setores.push({ id: mkId('setor'), nome, responsavel, meta });
+    if (!nome) return;
+
+    if (editId) {
+      const setor = (state.workspaceData.setores || []).find((x) => String(x.id) === editId);
+      if (!setor) {
+        showToast('Setor não encontrado.', 'info');
+        return;
+      }
+
+      setor.nome = nome;
+      setor.responsavelId = responsavelId;
+      if ('responsavel' in setor) delete setor.responsavel;
+      setor.meta = meta;
+      saveWorkspaceData();
+      closeWorkspaceModal('sector');
+      renderWorkspaceSection('configuracoes');
+      showToast('Setor alterado.', 'success');
+      return;
+    }
+
+    state.workspaceData.setores.push({ id: mkId('setor'), nome, responsavelId, meta });
     saveWorkspaceData();
+    closeWorkspaceModal('sector');
     renderWorkspaceSection('configuracoes');
     showToast('Setor salvo.', 'success');
     return;
@@ -2221,6 +2281,7 @@ function handleWorkspaceClick(e) {
     if (overlay.id === 'wsMeetingTaskModalOverlay') closeWorkspaceModal('meeting-task');
     if (overlay.id === 'wsProcessModalOverlay') closeWorkspaceModal('process');
     if (overlay.id === 'wsMeetingProcessModalOverlay') closeWorkspaceModal('meeting-process');
+    if (overlay.id === 'wsSectorModalOverlay') closeWorkspaceModal('sector');
     return;
   }
 
@@ -2428,18 +2489,7 @@ function handleWorkspaceClick(e) {
     const sectorId = String(editSectorBtn.dataset.editSector || '');
     const setor = (state.workspaceData.setores || []).find((x) => String(x.id) === sectorId);
     if (!setor) return;
-    const nome = promptRequiredValue('Alterar setor - nome:', setor.nome || '', { maxLen: 120 });
-    if (nome === null || nome === '__INVALID__') return;
-    const responsavel = promptRequiredValue('Alterar setor - responsável:', setor.responsavel || '', { maxLen: 120 });
-    if (responsavel === null || responsavel === '__INVALID__') return;
-    const meta = promptOptionalValue('Alterar setor - meta:', setor.meta || '');
-    if (meta === null) return;
-    setor.nome = nome;
-    setor.responsavel = responsavel;
-    setor.meta = meta;
-    saveWorkspaceData();
-    renderWorkspaceSection('configuracoes');
-    showToast('Setor alterado.', 'success');
+    openWorkspaceModalForEdit('sector', setor);
     return;
   }
 
@@ -2776,6 +2826,8 @@ function getWorkspaceModalFormId(kind) {
         ? 'wsTaskForm'
         : kind === 'process'
           ? 'wsProcessForm'
+          : kind === 'sector'
+            ? 'wsSectorForm'
           : kind === 'meeting-task'
             ? 'wsMeetingTaskForm'
             : kind === 'meeting-process'
@@ -2825,6 +2877,13 @@ function getWorkspaceModalCopy(kind, mode) {
       label: isEdit ? 'ALTERAR PROCESSO DE REUNIÃO' : 'PROCESSO DE REUNIÃO',
       title: isEdit ? 'Alterar Processo de Reunião' : 'Novo Processo de Reunião',
       submit: isEdit ? 'Salvar alterações' : 'Salvar Processo',
+    };
+  }
+  if (kind === 'sector') {
+    return {
+      label: isEdit ? 'ALTERAR SETOR' : 'NOVO SETOR',
+      title: isEdit ? 'Alterar Setor' : 'Novo Setor',
+      submit: isEdit ? 'Salvar alterações' : 'Salvar Setor',
     };
   }
   return { label: '', title: '', submit: '' };
@@ -2935,6 +2994,12 @@ function openWorkspaceModalForEdit(kind, item) {
     form.descricao.value = String(item.descricao || '');
   }
 
+  if (kind === 'sector') {
+    form.nome.value = String(item.nome || '');
+    form.responsavelId.value = String(item.responsavelId || '');
+    form.meta.value = String(item.meta || '');
+  }
+
   refreshWorkspaceEnhancedSelects(form);
 
   openWorkspaceModal(kind);
@@ -2955,6 +3020,8 @@ function getWorkspaceModalOverlayId(kind) {
       ? 'wsTaskModalOverlay'
       : kind === 'meeting-task'
         ? 'wsMeetingTaskModalOverlay'
+        : kind === 'sector'
+          ? 'wsSectorModalOverlay'
         : kind === 'process'
           ? 'wsProcessModalOverlay'
           : kind === 'meeting-process'

@@ -107,6 +107,17 @@
   color: #eaf8ff;
   background: linear-gradient(120deg, rgba(26, 143, 187, 0.84), rgba(34, 111, 176, 0.82));
   box-shadow: 0 10px 18px rgba(17, 70, 119, 0.24);
+  transition: var(--transition);
+}
+
+.ws-form button:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.ws-form button:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .ws-focus {
@@ -332,6 +343,7 @@
   align-items: center;
   justify-content: center;
   z-index: 2;
+  transition: var(--transition);
 }
 
 .ws-org-node .ws-tree-add-btn,
@@ -360,9 +372,17 @@
   box-shadow: 0 8px 16px rgba(9, 53, 84, 0.22);
 }
 
+.ws-tree-add-btn:hover {
+  filter: brightness(1.06);
+}
+
 .ws-tree-remove-btn {
   background: linear-gradient(120deg, rgba(176, 79, 90, 0.92), rgba(124, 47, 53, 0.9));
   box-shadow: 0 8px 16px rgba(66, 18, 23, 0.2);
+}
+
+.ws-tree-remove-btn:hover {
+  filter: brightness(1.06);
 }
 
 .ws-tree-root-wrap {
@@ -411,6 +431,11 @@
   line-height: 1;
   background: linear-gradient(145deg, rgba(20, 130, 178, 0.7), rgba(30, 90, 145, 0.75));
   box-shadow: 0 0 0 1px rgba(94, 194, 234, 0.25), 0 8px 16px rgba(6, 32, 56, 0.35);
+  transition: var(--transition);
+}
+
+.ws-tree-toggle:hover {
+  filter: brightness(1.06);
 }
 
 .ws-tree-pad {
@@ -495,6 +520,7 @@
 }
 
 .ws-open-planning {
+  margin-bottom: 12px;
   margin-top: 12px;
   border: none;
   border-radius: 10px;
@@ -502,6 +528,17 @@
   font-weight: 600;
   color: #eaf8ff;
   background: linear-gradient(120deg, rgba(26, 143, 187, 0.84), rgba(34, 111, 176, 0.82));
+  transition: var(--transition);
+}
+
+.ws-open-planning:not(.ws-open-icon):hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.ws-open-planning:not(.ws-open-icon):active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .ws-item-mini-actions .ws-open-planning,
@@ -782,6 +819,19 @@
   font-weight: 600;
   color: #eaf8ff;
   background: linear-gradient(120deg, rgba(26, 143, 187, 0.84), rgba(34, 111, 176, 0.82));
+  transition: var(--transition);
+}
+
+.ws-inline-form button:not(.ws-open-icon):hover,
+.ws-unlink-btn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+
+.ws-inline-form button:not(.ws-open-icon):active,
+.ws-unlink-btn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
 }
 
 .ws-unlink-btn {
@@ -821,6 +871,12 @@
   font-size: 1.2rem;
   line-height: 1;
   background: rgba(24, 41, 61, 0.8);
+  transition: var(--transition);
+}
+
+.ws-modal-close:hover {
+  filter: brightness(1.08);
+  background: rgba(24, 41, 61, 0.95);
 }
 
 .ws-ata-doc {
