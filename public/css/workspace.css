@@ -726,7 +726,7 @@
 }
 
 .ws-searchable-select .select-trigger {
-  width: 100%;
+  width: 220px;
   min-height: 40px;
   justify-content: flex-start;
   text-align: left;

@@ -342,7 +342,21 @@
   border: none;
   background: none;
   color: var(--action-delete);
-  font-size: 0.72rem;
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+  transition: var(--transition);
+}
+.pauta-task-del:hover,
+.pauta-process-del:hover {
+  opacity: 0.85;
+}
+.pauta-task-del svg,
+.pauta-process-del svg {
+  display: block;
 }
 .pauta-process-list {
   display: flex;
@@ -484,7 +498,7 @@
 }
 .right-item-delete:hover { color: #ff8a95; }
 
-.empty-col { color: var(--text-dim); font-size: 0.85rem; text-align: center; padding: 40px 0; }
+.empty-col { color: var(--text-dim); font-size: 0.85rem; text-align: center; }
 
 /* ═══════════════════════════════════════════════════════════════════════════ */
 /* ANEXOS TAB                                                                 */
@@ -530,6 +544,7 @@
   color: var(--action-edit);
   border: 1px solid rgba(213, 161, 77, 0.45);
   background: var(--action-edit-bg);
+  border-radius: var(--radius); 
 }
 
 #btnDetailSettings:hover {

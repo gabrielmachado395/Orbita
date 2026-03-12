@@ -72,6 +72,7 @@ function setupDetailView() {
   const pautaInput = document.getElementById('pautaInput');
   const pautaAssigneeSelect = document.getElementById('pautaAssignee');
   populatePautaAssigneeSelect();
+  setupDetailEnhancedAssigneeSelects();
   if (pautaInput) {
     pautaInput.addEventListener('keydown', async (e) => {
       if (e.key === 'Enter') {
@@ -297,7 +298,10 @@ function openMeetingDetail(meeting) {
     pautaInput.placeholder = isFinalized ? 'Reunião finalizada: inclusão bloqueada' : 'Nova pauta';
   }
   const pautaAssignee = document.getElementById('pautaAssignee');
-  if (pautaAssignee) pautaAssignee.disabled = isFinalized;
+  if (pautaAssignee) {
+    pautaAssignee.disabled = isFinalized;
+    setupDetailEnhancedAssigneeSelects();
+  }
   const btnAddPauta = document.getElementById('btnAddPauta');
   if (btnAddPauta) {
     btnAddPauta.disabled = isFinalized;
@@ -1298,11 +1302,93 @@ function populatePautaAssigneeSelect() {
   if (!select) return;
   const options = buildPautaAssigneeOptions(getCurrentUserInitials());
   select.innerHTML = options || `<option value="${esc(getCurrentUserInitials())}">${esc(getCurrentUserInitials())}</option>`;
+
+  if (typeof syncWorkspaceEnhancedSelect === 'function') {
+    syncWorkspaceEnhancedSelect(select);
+  }
+}
+
+function enhanceDetailSelectWithWorkspaceDropdown(selectEl) {
+  if (!(selectEl instanceof HTMLSelectElement)) return;
+  if (selectEl.dataset.detailEnhanced === '1') {
+    if (typeof syncWorkspaceEnhancedSelect === 'function') {
+      syncWorkspaceEnhancedSelect(selectEl);
+    }
+
+    const wrapperExisting = selectEl.closest('.ws-searchable-select');
+    if (wrapperExisting) {
+      const triggerExisting = wrapperExisting.querySelector('.select-trigger');
+      if (triggerExisting instanceof HTMLButtonElement) {
+        triggerExisting.disabled = !!selectEl.disabled;
+      }
+    }
+    return;
+  }
+
+  selectEl.dataset.detailEnhanced = '1';
+  selectEl.classList.add('ws-native-select-hidden');
+
+  const wrapper = document.createElement('div');
+  wrapper.className = 'custom-select ws-searchable-select';
+  selectEl.parentNode.insertBefore(wrapper, selectEl);
+  wrapper.appendChild(selectEl);
+
+  const trigger = document.createElement('button');
+  trigger.type = 'button';
+  trigger.className = 'select-trigger';
+  trigger.disabled = !!selectEl.disabled;
+  const label = (typeof getWorkspaceSelectLabel === 'function')
+    ? getWorkspaceSelectLabel(selectEl)
+    : String((selectEl.options[selectEl.selectedIndex] && (selectEl.options[selectEl.selectedIndex].textContent || selectEl.options[selectEl.selectedIndex].label)) || 'Selecione...').trim();
+  trigger.innerHTML = `
+    <span>${esc(label)}</span>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+  `;
+  wrapper.appendChild(trigger);
+
+  trigger.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (selectEl.disabled) return;
+    if (typeof openWorkspaceFloatingSelect === 'function') {
+      openWorkspaceFloatingSelect(wrapper, selectEl);
+    }
+  });
+
+  selectEl.addEventListener('change', () => {
+    if (typeof syncWorkspaceEnhancedSelect === 'function') {
+      syncWorkspaceEnhancedSelect(selectEl);
+    }
+  });
+
+  if (typeof syncWorkspaceEnhancedSelect === 'function') {
+    syncWorkspaceEnhancedSelect(selectEl);
+  }
+}
+
+function setupDetailEnhancedAssigneeSelects(scope) {
+  const root = scope || document;
+  if (!(root instanceof Document) && !(root instanceof HTMLElement)) return;
+
+  const top = root.getElementById ? root.getElementById('pautaAssignee') : root.querySelector('#pautaAssignee');
+  if (top instanceof HTMLSelectElement) {
+    enhanceDetailSelectWithWorkspaceDropdown(top);
+  }
+
+  root.querySelectorAll('select[data-pauta-assignee]').forEach((selectEl) => {
+    if (selectEl instanceof HTMLSelectElement) {
+      enhanceDetailSelectWithWorkspaceDropdown(selectEl);
+    }
+  });
 }
 
 function renderPautas() {
   const list = document.getElementById('pautasList');
   let pautas = (state.currentMeeting && state.currentMeeting.pautas) || [];
+
+  if (typeof closeWorkspaceFloatingSelect === 'function') {
+    closeWorkspaceFloatingSelect();
+  }
 
   if (state.filterResp) {
     pautas = pautas.filter(p => (p.assignee || 'GM') === state.filterResp);
@@ -1337,7 +1423,7 @@ function renderPautas() {
           ? `
             <div class="pauta-assignee-row">
               <span class="pauta-assignee-label">Responsável</span>
-              <select class="pauta-assignee-select" data-pauta-assignee="${p.id}">
+              <select class="pauta-assignee-select" data-pauta-assignee="${p.id}" aria-label="Responsável da pauta">
                 ${buildPautaAssigneeOptions(p.assignee || currentUserKey)}
               </select>
             </div>
@@ -1363,7 +1449,7 @@ function renderPautas() {
                   <div class="pauta-task-head">
                     <span class="pauta-task-name">✔ ${esc(task.text || 'Tarefa')}</span>
                   ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
-                    ? `<button class="pauta-task-del" data-pauta-task-del="${p.id}" data-task-id="${task.id}" aria-label="Excluir tarefa">Excluir</button>`
+                    ? `<button class="pauta-task-del" data-pauta-task-del="${p.id}" data-task-id="${task.id}" aria-label="Excluir tarefa" title="Excluir tarefa"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
                     : ''}
                   </div>
                   <div class="pauta-process-list">
@@ -1372,7 +1458,7 @@ function renderPautas() {
                         <div class="pauta-process-item">
                           <span>⚙ ${esc(process.text || 'Processo')}</span>
                           ${(((p.assignee || 'GM') === currentUserKey) || canEditMeeting) && !meetingFinalized
-                            ? `<button class="pauta-process-del" data-pauta-process-del="${p.id}" data-task-id="${task.id}" data-process-id="${process.id}" aria-label="Excluir processo">Excluir</button>`
+                            ? `<button class="pauta-process-del" data-pauta-process-del="${p.id}" data-task-id="${task.id}" data-process-id="${process.id}" aria-label="Excluir processo" title="Excluir processo"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>`
                             : ''}
                         </div>
                       `).join('')
@@ -1408,6 +1494,8 @@ function renderPautas() {
       ${(typeof renderUserAvatar === 'function') ? renderUserAvatar(p.assignee || 'GM') : `<span class="hl-avatar">${esc(p.assignee || 'GM')}</span>`}
     </div>
   `).join('');
+
+  setupDetailEnhancedAssigneeSelects(list);
 
   list.querySelectorAll('[data-pauta-check]').forEach(cb => {
     cb.addEventListener('click', async () => {
