@@ -1005,10 +1005,7 @@ function renderHighlights() {
         <div class="hl-drag-row"><span class="hl-drag-dot"></span><span class="hl-drag-dot"></span></div>
       </div>
       <div class="hl-checkbox ${hl.checked ? 'checked' : ''} ${!canManageMeetingItems(state.currentMeeting, state.currentUser) ? 'disabled' : ''}" data-hl-check="${hl.id}"></div>
-      <span class="hl-text ${hl.checked ? 'checked-text' : ''}">${esc(hl.text)}</span>
-      <button class="hl-edit" data-hl-edit="${hl.id}" aria-label="Editar">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-      </button>
+      <span class="hl-text ${hl.checked ? 'checked-text' : ''}" data-hl-text="${hl.id}">${esc(hl.text)}</span>
       ${(typeof renderUserAvatar === 'function') ? renderUserAvatar(hl.assignee || 'GM') : `<span class="hl-avatar">${esc(hl.assignee || 'GM')}</span>`}
       <span class="hl-chevron">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
@@ -1064,20 +1061,28 @@ function renderHighlights() {
     });
   });
 
-  list.querySelectorAll('[data-hl-edit]').forEach(btn => {
-    btn.addEventListener('click', () => {
+  if (list.dataset.hlInlineEditBound !== '1') {
+    list.dataset.hlInlineEditBound = '1';
+    list.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const textSpan = target.closest('[data-hl-text]');
+      if (!(textSpan instanceof HTMLElement)) return;
+      if (!state.currentMeeting) return;
+
+      const meetingFinalized = isMeetingFinalized(state.currentMeeting);
       if (meetingFinalized) {
         showToast('Reuniões finalizadas não permitem alterações em destaques.', 'info');
         return;
       }
-      const hlId = btn.dataset.hlEdit;
-      const hl = highlights.find(h => h.id === hlId);
-      if (!hl) return;
-      const card = btn.closest('.highlight-card');
-      const textSpan = card.querySelector('.hl-text');
-      if (!textSpan || card.querySelector('.hl-inline-input')) return;
 
-      const oldText = textSpan.textContent;
+      const hlId = String(textSpan.dataset.hlText || '');
+      const hl = (state.currentMeeting.highlights || []).find(h => h.id === hlId);
+      if (!hl) return;
+      const card = textSpan.closest('.highlight-card');
+      if (!card || card.querySelector('.hl-inline-input')) return;
+
+      const oldText = String(textSpan.textContent || '');
       const input = document.createElement('input');
       input.type = 'text';
       input.value = oldText;
@@ -1086,13 +1091,18 @@ function renderHighlights() {
       input.focus();
       input.select();
 
-      const save = async () => {
-        const newText = input.value.trim();
-        if (!newText || newText === oldText) {
-          const span = document.createElement('span');
-          span.className = 'hl-text' + (hl.checked ? ' checked-text' : '');
-          span.textContent = oldText;
-          input.replaceWith(span);
+      const restoreSpan = (value) => {
+        const span = document.createElement('span');
+        span.className = 'hl-text' + (hl.checked ? ' checked-text' : '');
+        span.dataset.hlText = hlId;
+        span.textContent = value;
+        input.replaceWith(span);
+      };
+
+      const save = () => {
+        const newText = String(input.value || '').trim();
+        if (!newText || newText === oldText.trim()) {
+          restoreSpan(oldText);
           return;
         }
         try {
@@ -1101,25 +1111,17 @@ function renderHighlights() {
           renderHighlights();
         } catch (e) {
           showToast('Erro ao editar', 'error');
-          const span = document.createElement('span');
-          span.className = 'hl-text' + (hl.checked ? ' checked-text' : '');
-          span.textContent = oldText;
-          input.replaceWith(span);
+          restoreSpan(oldText);
         }
       };
 
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') { e.preventDefault(); save(); }
-        if (e.key === 'Escape') {
-          const span = document.createElement('span');
-          span.className = 'hl-text' + (hl.checked ? ' checked-text' : '');
-          span.textContent = oldText;
-          input.replaceWith(span);
-        }
+        if (e.key === 'Escape') restoreSpan(oldText);
       });
       input.addEventListener('blur', save);
     });
-  });
+  }
 }
 
 function renderAtaAccordionBody(meeting) {
@@ -1308,6 +1310,143 @@ function populatePautaAssigneeSelect() {
   }
 }
 
+let detailFloatingSelectState = null;
+
+function closeDetailFloatingSelect() {
+  const stateRef = detailFloatingSelectState;
+  if (!stateRef) return;
+
+  if (stateRef.wrapper) stateRef.wrapper.classList.remove('is-open');
+  if (stateRef.panel && stateRef.panel.parentNode) stateRef.panel.parentNode.removeChild(stateRef.panel);
+  if (stateRef.onDocumentPointerDown) document.removeEventListener('mousedown', stateRef.onDocumentPointerDown, true);
+  if (stateRef.onWindowResize) window.removeEventListener('resize', stateRef.onWindowResize, true);
+  if (stateRef.onWindowScroll) window.removeEventListener('scroll', stateRef.onWindowScroll, true);
+
+  detailFloatingSelectState = null;
+}
+
+function positionDetailFloatingSelect() {
+  const stateRef = detailFloatingSelectState;
+  if (!stateRef || !stateRef.trigger || !stateRef.panel) return;
+
+  const rect = stateRef.trigger.getBoundingClientRect();
+  const viewportWidth = window.innerWidth || document.documentElement.clientWidth || 0;
+  const width = Math.min(Math.max(rect.width, 220), Math.max(220, viewportWidth - 16));
+  const viewportHeight = window.innerHeight || document.documentElement.clientHeight || 0;
+  const measuredHeight = stateRef.panel.getBoundingClientRect().height || stateRef.panel.offsetHeight || 0;
+  const panelHeight = Math.min(280, Math.max(0, measuredHeight || 280));
+  let top = rect.bottom + 8;
+  let left = rect.left;
+
+  const shouldOpenUp = rect.bottom + panelHeight + 16 > viewportHeight && rect.top > panelHeight + 16;
+  if (shouldOpenUp) {
+    top = Math.max(8, rect.top - panelHeight - 8);
+  }
+
+  stateRef.panel.classList.toggle('open-up', shouldOpenUp);
+
+  if (left + width + 8 > viewportWidth) {
+    left = Math.max(8, viewportWidth - width - 8);
+  }
+
+  stateRef.panel.style.left = `${Math.max(8, left)}px`;
+  stateRef.panel.style.top = `${Math.max(8, top)}px`;
+  stateRef.panel.style.width = `${width}px`;
+}
+
+function renderDetailFloatingSelectOptions(panel, options, selectedValue, filterText = '') {
+  if (!(panel instanceof HTMLElement)) return;
+  const optionsList = panel.querySelector('.select-options-list');
+  if (!(optionsList instanceof HTMLElement)) return;
+
+  const term = String(filterText || '').trim().toLowerCase();
+  const normalized = Array.isArray(options) ? options : [];
+  const visible = normalized.filter((opt) => {
+    const label = String(opt && opt.label ? opt.label : '').toLowerCase();
+    return !term || label.includes(term);
+  });
+
+  if (!visible.length) {
+    optionsList.innerHTML = '<p class="select-empty">Nenhuma opção encontrada</p>';
+    return;
+  }
+
+  optionsList.innerHTML = visible.map((opt) => {
+    const value = String(opt && opt.value ? opt.value : '');
+    const label = String(opt && opt.label ? opt.label : value);
+    const selected = (String(selectedValue || '') === value) ? 'selected' : '';
+    return `<button type="button" class="select-option ${selected}" data-detail-option-value="${esc(value)}">${esc(label)}</button>`;
+  }).join('');
+
+  optionsList.querySelectorAll('[data-detail-option-value]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const nextValue = String(btn.dataset.detailOptionValue || '');
+      const stateRef = detailFloatingSelectState;
+      if (!stateRef || typeof stateRef.onSelect !== 'function') {
+        closeDetailFloatingSelect();
+        return;
+      }
+      stateRef.onSelect(nextValue);
+      closeDetailFloatingSelect();
+    });
+  });
+
+  requestAnimationFrame(() => positionDetailFloatingSelect());
+}
+
+function openDetailFloatingSelect(trigger, options, selectedValue, onSelect) {
+  if (!(trigger instanceof HTMLElement)) return;
+  if (!Array.isArray(options)) return;
+  if (typeof onSelect !== 'function') return;
+
+  if (detailFloatingSelectState && detailFloatingSelectState.trigger === trigger) {
+    closeDetailFloatingSelect();
+    return;
+  }
+
+  closeDetailFloatingSelect();
+
+  const wrapper = trigger.closest('.ws-searchable-select');
+  if (wrapper) wrapper.classList.add('is-open');
+
+  const panel = document.createElement('div');
+  panel.className = 'select-dropdown ws-floating-select-dropdown open';
+  panel.innerHTML = `
+    <div class="search-field">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+      <input class="search-input" type="text" placeholder="Buscar...">
+    </div>
+    <div class="select-options-list"></div>
+  `;
+  document.body.appendChild(panel);
+
+  const onWindowResize = () => positionDetailFloatingSelect();
+  const onWindowScroll = () => positionDetailFloatingSelect();
+  const onDocumentPointerDown = (event) => {
+    const target = event.target;
+    if (!(target instanceof Node)) return;
+    if (panel.contains(target) || trigger.contains(target) || (wrapper && wrapper.contains(target))) return;
+    closeDetailFloatingSelect();
+  };
+
+  detailFloatingSelectState = { trigger, wrapper, panel, onWindowResize, onWindowScroll, onDocumentPointerDown, onSelect };
+  positionDetailFloatingSelect();
+  renderDetailFloatingSelectOptions(panel, options, selectedValue);
+  requestAnimationFrame(() => positionDetailFloatingSelect());
+
+  const searchInput = panel.querySelector('.search-input');
+  if (searchInput instanceof HTMLInputElement) {
+    searchInput.addEventListener('input', () => {
+      renderDetailFloatingSelectOptions(panel, options, selectedValue, searchInput.value);
+    });
+    setTimeout(() => searchInput.focus(), 0);
+  }
+
+  window.addEventListener('resize', onWindowResize, true);
+  window.addEventListener('scroll', onWindowScroll, true);
+  setTimeout(() => document.addEventListener('mousedown', onDocumentPointerDown, true), 0);
+}
+
 function enhanceDetailSelectWithWorkspaceDropdown(selectEl) {
   if (!(selectEl instanceof HTMLSelectElement)) return;
   if (selectEl.dataset.detailEnhanced === '1') {
@@ -1374,18 +1513,13 @@ function setupDetailEnhancedAssigneeSelects(scope) {
   if (top instanceof HTMLSelectElement) {
     enhanceDetailSelectWithWorkspaceDropdown(top);
   }
-
-  root.querySelectorAll('select[data-pauta-assignee]').forEach((selectEl) => {
-    if (selectEl instanceof HTMLSelectElement) {
-      enhanceDetailSelectWithWorkspaceDropdown(selectEl);
-    }
-  });
 }
 
 function renderPautas() {
   const list = document.getElementById('pautasList');
   let pautas = (state.currentMeeting && state.currentMeeting.pautas) || [];
 
+  closeDetailFloatingSelect();
   if (typeof closeWorkspaceFloatingSelect === 'function') {
     closeWorkspaceFloatingSelect();
   }
@@ -1409,6 +1543,11 @@ function renderPautas() {
   const meetingFinalized = isMeetingFinalized(state.currentMeeting);
   const canEditMeeting = canCurrentUserEditMeeting(state.currentMeeting) && !meetingFinalized;
 
+  const pautaAssigneeOptions = getMeetingParticipantInitials(state.currentMeeting).map((initials) => {
+    const info = (typeof getUserDisplay === 'function') ? getUserDisplay(initials) : { name: initials };
+    return { value: String(initials || ''), label: String(info && info.name ? info.name : initials) };
+  });
+
   list.innerHTML = pautas.map(p => `
     <div class="highlight-card pauta-card-styled" data-pauta-id="${p.id}">
       <div class="hl-drag">
@@ -1418,14 +1557,17 @@ function renderPautas() {
       </div>
       <div class="hl-checkbox ${p.checked ? 'checked' : ''} ${!canToggle ? 'disabled' : ''}" data-pauta-check="${p.id}"></div>
       <div class="pauta-main">
-        <span class="hl-text ${p.checked ? 'checked-text' : ''}">${esc(p.text)}</span>
+        <span class="hl-text pauta-text ${p.checked ? 'checked-text' : ''}" data-pauta-text="${p.id}">${esc(p.text)}</span>
         ${canEditMeeting
           ? `
             <div class="pauta-assignee-row">
               <span class="pauta-assignee-label">Responsável</span>
-              <select class="pauta-assignee-select" data-pauta-assignee="${p.id}" aria-label="Responsável da pauta">
-                ${buildPautaAssigneeOptions(p.assignee || currentUserKey)}
-              </select>
+              <div class="custom-select ws-searchable-select" data-pauta-assignee-wrap="${p.id}">
+                <button type="button" class="select-trigger" data-pauta-assignee-trigger="${p.id}" aria-label="Responsável da pauta">
+                  <span>${esc(((typeof getUserDisplay === 'function') ? (getUserDisplay(p.assignee || currentUserKey) || {}).name : (p.assignee || currentUserKey)) || (p.assignee || currentUserKey))}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+              </div>
             </div>
           `
           : ''}
@@ -1495,7 +1637,44 @@ function renderPautas() {
     </div>
   `).join('');
 
-  setupDetailEnhancedAssigneeSelects(list);
+  if (list.dataset.pautaAssigneeBound !== '1') {
+    list.dataset.pautaAssigneeBound = '1';
+    list.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const btn = target.closest('[data-pauta-assignee-trigger]');
+      if (!(btn instanceof HTMLElement)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (meetingFinalized) return;
+      if (!canEditMeeting) return;
+
+      if (detailFloatingSelectState && detailFloatingSelectState.trigger === btn) {
+        closeDetailFloatingSelect();
+        return;
+      }
+
+      if (typeof closeWorkspaceFloatingSelect === 'function') {
+        closeWorkspaceFloatingSelect();
+      }
+      closeDetailFloatingSelect();
+
+      const pautaId = String(btn.dataset.pautaAssigneeTrigger || '');
+      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
+      if (!pauta) return;
+
+      openDetailFloatingSelect(
+        btn,
+        pautaAssigneeOptions,
+        pauta.assignee || currentUserKey,
+        (nextValue) => {
+          pauta.assignee = String(nextValue || '') || currentUserKey;
+          persistCurrentMeetingPautas();
+          renderPautas();
+        },
+      );
+    });
+  }
 
   list.querySelectorAll('[data-pauta-check]').forEach(cb => {
     cb.addEventListener('click', async () => {
@@ -1521,18 +1700,70 @@ function renderPautas() {
     });
   });
 
-  list.querySelectorAll('[data-pauta-assignee]').forEach(select => {
-    select.addEventListener('change', async () => {
-      if (meetingFinalized) return;
+  if (list.dataset.pautaInlineEditBound !== '1') {
+    list.dataset.pautaInlineEditBound = '1';
+    list.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const textSpan = target.closest('[data-pauta-text]');
+      if (!(textSpan instanceof HTMLElement)) return;
+      if (!state.currentMeeting) return;
+
+      const meetingFinalized = isMeetingFinalized(state.currentMeeting);
+      const canEditMeeting = canCurrentUserEditMeeting(state.currentMeeting) && !meetingFinalized;
+      if (meetingFinalized) {
+        showToast('Reuniões finalizadas não permitem alterações em pautas.', 'info');
+        return;
+      }
       if (!canEditMeeting) return;
-      const id = select.dataset.pautaAssignee;
-      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === id);
+
+      const pautaId = String(textSpan.dataset.pautaText || '');
+      const pauta = (state.currentMeeting.pautas || []).find((x) => x.id === pautaId);
       if (!pauta) return;
-      pauta.assignee = String(select.value || '') || getCurrentUserInitials();
-      persistCurrentMeetingPautas();
-      renderPautas();
+
+      const card = textSpan.closest('.pauta-card-styled');
+      if (!card || card.querySelector('.hl-inline-input')) return;
+
+      const oldText = String(textSpan.textContent || '');
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = oldText;
+      input.className = 'hl-inline-input';
+      textSpan.replaceWith(input);
+      input.focus();
+      input.select();
+
+      const restoreSpan = (value) => {
+        const span = document.createElement('span');
+        span.className = 'hl-text pauta-text' + (pauta.checked ? ' checked-text' : '');
+        span.dataset.pautaText = pautaId;
+        span.textContent = value;
+        input.replaceWith(span);
+      };
+
+      const save = () => {
+        const newText = String(input.value || '').trim();
+        if (!newText || newText === oldText.trim()) {
+          restoreSpan(oldText);
+          return;
+        }
+        try {
+          pauta.text = newText;
+          persistCurrentMeetingPautas();
+          renderPautas();
+        } catch (e) {
+          showToast('Erro ao editar pauta', 'error');
+          restoreSpan(oldText);
+        }
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); save(); }
+        if (e.key === 'Escape') restoreSpan(oldText);
+      });
+      input.addEventListener('blur', save);
     });
-  });
+  }
 
   // Show/hide description editor
   list.querySelectorAll('[data-pauta-add-desc], [data-pauta-edit-desc]').forEach(btn => {

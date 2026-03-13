@@ -772,6 +772,21 @@
 
 .ws-floating-select-dropdown.open {
   display: flex;
+  animation: wsSlideDown 0.15s ease;
+}
+
+.ws-floating-select-dropdown.open.open-up {
+  animation: wsSlideUp 0.15s ease;
+}
+
+@keyframes wsSlideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes wsSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .ws-floating-select-dropdown .search-field {
